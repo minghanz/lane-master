@@ -1,0 +1,1082 @@
+#include "LaneImage.hpp"
+#include <cstdio>
+
+#include "VanPt.h"
+#include "LaneMark.h"
+#include "LearnModel.h"
+
+using namespace std;
+using namespace cv;
+
+//float ym_per_pix = 40./720.;
+//float xm_per_pix = 3.7/600.;
+float ym_per_pix = 40./500.;
+float xm_per_pix = 3.7/200.;
+
+int warp_col = 400;
+int warp_row = 500;
+
+//// #ifdef DTREE
+//// LaneImage::LaneImage (Mat& per_mtx, Mat& inv_per_mtx, Mat& image, float nframe, int samp_cyc, int ini_flag, int& hist_width, bool first_sucs, int window_half_width, Mat& BGR_sample, Mat& HLS_sample, Mat& BGR_resp, Mat& HLS_resp, 
+//// 	Vec3f left_fit, Vec3f right_fit, Vec3f avg_hist_left_fit, Vec3f avg_hist_right_fit, vector<int> chnl_thresh, Ptr<ml::DTrees> BGR_tree, Ptr<ml::DTrees> HLS_tree, Mat dist_coeff, Mat cam_mtx )
+//// #endif
+//// #ifdef LREGG
+//// LaneImage::LaneImage (Mat& per_mtx, Mat& inv_per_mtx, Mat& image, float nframe, int samp_cyc, int ini_flag, int& hist_width, bool first_sucs, int window_half_width, Mat& BGR_sample, Mat& HLS_sample, Mat& BGR_resp, Mat& HLS_resp, 
+//// 	Vec3f left_fit, Vec3f right_fit, Vec3f avg_hist_left_fit, Vec3f avg_hist_right_fit, vector<int> chnl_thresh, Ptr<ml::LogisticRegression> BGR_regg, Ptr<ml::LogisticRegression> HLS_regg, Mat dist_coeff, Mat cam_mtx )
+//// #endif
+LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, Mat cam_mtx, Mat dist_coeff, float nframe)
+{
+	__raw_image = image;
+	__row = image.rows;
+	__col = image.cols;
+	__calibration_dist = dist_coeff;
+	__calibration_mtx = cam_mtx;
+
+	__calibration();
+	
+	//__sobel_kernel_size = 15;
+	__sobel_kernel_size = max(warp_col/80, 5 );
+	vector<int> chnl_thresh = van_pt.chnl_thresh;
+	if (chnl_thresh[0] == 0)
+	{
+	__r_thresh = Vec2f(90, 255); // 2
+	__g_thresh = Vec2f(60, 255); // +
+	__b_thresh = Vec2f(70, 255); // w
+	__h_thresh = Vec2f(0, 25); // y
+	__l_thresh = Vec2f(55, 255); // +
+	__s_thresh = Vec2f(85, 255); // y
+	__abs_x_thresh = Vec2f(10, 100);
+	__abs_y_thresh = Vec2f(10, 100);
+	__mag_thresh = Vec2f(20, 200);
+	__dir_thresh = Vec2f(50, 200); // [0-pi/2] -> [0-255]
+	//__r_thresh = Vec2f(170, 255);
+	//__g_thresh = Vec2f(190, 255);
+	//__b_thresh = Vec2f(190, 255);
+	//__h_thresh = Vec2f(18, 100);
+	//__l_thresh = Vec2f(100, 180);
+	//__s_thresh = Vec2f(55, 255);
+	//__abs_x_thresh = Vec2f(5, 20);
+	//__abs_y_thresh = Vec2f(5, 20);
+	//__mag_thresh = Vec2f(10, 40);
+	//__dir_thresh = Vec2f(0.7, 1.0);
+	}
+	else
+	{
+		__r_thresh = Vec2f(chnl_thresh[2], 255); // 2
+		__g_thresh = Vec2f(chnl_thresh[1], 255); // +
+		__b_thresh = Vec2f(chnl_thresh[0], 255); // w
+		__h_thresh = Vec2f(0, chnl_thresh[3]); // y
+		__l_thresh = Vec2f(chnl_thresh[4], 255); // +
+		__s_thresh = Vec2f(chnl_thresh[5], 255); // y
+		__abs_x_thresh_pre = Vec2f(10, 255); // (10,100)
+		__abs_x_thresh = Vec2f(20, 255); // (10,100) (20, 255)
+		__abs_y_thresh = Vec2f(0, 30); // (10, 50) (0, 20) not used
+		__mag_thresh = Vec2f(50, 255); // (20, 100) not used
+		__dir_thresh = Vec2f(0, 100); // [0-pi/2] -> [0-255] (50, 200)
+		
+		cout << "Color thresh: " << __b_thresh[0] << " " << __g_thresh[0] << " " << __r_thresh[0] << " " << __h_thresh[1] << " " << __l_thresh[0] << " " << __s_thresh[0] << " " << endl;
+		cout << "Adaptive color threshold used. " << endl;
+	}
+	
+	#ifdef DTREE
+	if ( learn_model.BGR_tree.empty() )
+	{
+		__BGR_tree = ml::DTrees::create();
+		cout << "new BGR tree." << endl;
+	}
+	else
+	{
+		__BGR_tree = learn_model.BGR_tree;
+	}
+	if ( learn_model.HLS_tree.empty() )
+	{
+		__HLS_tree = ml::DTrees::create();
+		cout << "new HLS tree." << endl;
+	}
+	else
+	{
+		__HLS_tree = learn_model.HLS_tree;
+		
+	}
+	#endif
+	#ifdef LREGG
+	if ( learn_model.BGR_regg.empty() )
+	{
+		__BGR_regg = ml::LogisticRegression::create();
+		cout << "new BGR regg." << endl;
+	}
+	else
+	{
+		__BGR_regg = learn_model.BGR_regg;
+	}
+	if ( learn_model.HLS_regg.empty() )
+	{
+		__HLS_regg = ml::LogisticRegression::create();
+		cout << "new HLS regg." << endl;
+	}
+	else
+	{
+		__HLS_regg = learn_model.HLS_regg;
+		
+	}
+	#endif
+	
+	__BGR_sample = learn_model.BGR_sample;
+	__HLS_sample = learn_model.HLS_sample;
+	__BGR_resp = learn_model.BGR_resp;
+	__HLS_resp = learn_model.HLS_resp;
+	__samp_cyc = learn_model.samp_cyc;
+	__nframe = nframe;
+	__train_or_not = false;
+	
+	__left_nolane = false;
+	__right_nolane = false;
+	
+	__window_number = 10;
+	//__window_half_width = warp_col/12;
+	__window_half_width = lane_mark.window_half_width;
+	__window_min_pixel = warp_row/__window_number*__window_half_width*2/100; // 1%.   60 for 1280*720(hand set). 
+	cout << "min pixel: " << __window_min_pixel << endl;
+	
+	__initial_frame = ! lane_mark.new_result;
+	__last_left_fit = lane_mark.left_fit_best;
+	__last_right_fit = lane_mark.right_fit_best;
+	__left_fit = Vec3f(0, 0, 0);
+	__right_fit = Vec3f(0, 0, 0);
+	__left_fit_cr = Vec3f(0, 0, 0);
+	__right_fit_cr = Vec3f(0, 0, 0);
+	
+	__left_dist_to_hist = 0;
+	__right_dist_to_hist = 0;
+	__left_curve_dist_to_hist = 0;
+	__right_curve_dist_to_hist = 0;
+	__avg_hist_left_fit = lane_mark.avg_hist_left_fit;
+	__avg_hist_right_fit = lane_mark.avg_hist_right_fit;
+	
+	__first_sucs = van_pt.first_sucs;
+	
+	if (van_pt.ini_flag == 0)
+	{
+	clock_t t_last = clock();
+	__transform_matrix = van_pt.per_mtx;
+	__warp();
+	
+	clock_t t_now = clock();
+	cout << "Image warpped, using " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+	t_last = t_now;
+	
+	//__filter_binary = Mat::ones(__row, __col, CV_32F);
+	__warped_filter_image = Mat::ones(warp_row, warp_col, CV_32F);
+	__imageFilter();
+	
+	t_now = clock();
+	cout << "Image filtered, using " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+	t_last = t_now;
+	
+	__lane_window_out_img = Mat(warp_row, warp_col, CV_8UC3, Scalar(0, 0, 0));
+	__fitLaneMovingWindow(lane_mark.hist_width);
+	
+	t_now = clock();
+	cout << "Image fitted, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+	t_last = t_now;
+	
+	if (__left_fit != Vec3f(0, 0, 0) && __right_fit != Vec3f(0, 0, 0))
+	{
+		//__getLaneWidthWarp();
+		get_vanishing_point(van_pt.inv_per_mtx);
+	}
+	
+	t_now = clock();
+	cout << "New vanishing point found, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+	t_last = t_now;
+	}
+	else
+		cout << "Current frame is not processed due to failed initialization. " << endl;
+}
+
+
+void LaneImage::__calibration()
+{
+	/// generate an undistorted image (no perspective transforms)
+	if (__calibration_mtx.empty())
+		__calibrate_image = __raw_image;
+	else
+		undistort(__raw_image, __calibrate_image, __calibration_mtx, __calibration_dist);
+	return;
+}
+
+void LaneImage::__warp()
+{
+	/// generate warped binary image or colorful image
+	warpPerspective(__calibrate_image, __warped_raw_image, __transform_matrix, Size(warp_col, warp_row), INTER_NEAREST);
+	//warpPerspective(__filter_binary, __warped_filter_image, __transform_matrix, Size(__col, __row), INTER_NEAREST);
+	#ifndef NDEBUG
+	imshow("warped_raw", __warped_raw_image);
+	#endif
+	return;
+}
+
+void LaneImage::__imageFilter()
+{
+	/// filter the warped image
+	Mat gray;
+	cvtColor(__warped_raw_image, gray, COLOR_BGR2GRAY); // BGR
+	Mat warp_mask = gray == 0;
+	
+	GaussianBlur(gray, gray, Size(5,5), 0 );
+	
+	Mat dilate_kernel = getStructuringElement(MORPH_RECT, Size(5, 5) );
+	dilate(warp_mask, warp_mask, dilate_kernel );
+	#ifndef NDEBUG_CL
+	imshow("warp_mask", warp_mask);
+	#endif
+	
+	
+	
+	Mat binary_output(warp_row, warp_col, CV_32FC1, Scalar(1));
+	Mat filter_binary;
+	//RGB filter
+	/* // based on the unwarped calibrated image
+	colorThresh(__calibrate_image, filter_binary, __b_thresh, 0, "rgb");
+	Mat binary_output_white = binary_output.mul(filter_binary);
+	colorThresh(__calibrate_image, filter_binary, __g_thresh, 1, "rgb");
+	binary_output_white = binary_output_white.mul(filter_binary);
+	colorThresh(__calibrate_image, filter_binary, __r_thresh, 2, "rgb");
+	binary_output_white = binary_output_white.mul(filter_binary);
+	threshold(binary_output_white, binary_output_white, 0.2, 1, THRESH_TOZERO);
+	//HLS filter
+	colorThresh(__calibrate_image, filter_binary, __h_thresh, 0, "hls");
+	Mat binary_output_yellow = binary_output.mul(filter_binary);
+	colorThresh(__calibrate_image, filter_binary, __l_thresh, 1, "hls");
+	binary_output_yellow = binary_output_yellow.mul(filter_binary);
+	colorThresh(__calibrate_image, filter_binary, __s_thresh, 2, "hls");
+	binary_output_yellow = binary_output_yellow.mul(filter_binary);
+	threshold(binary_output_yellow, binary_output_yellow, 0.2, 1, THRESH_TOZERO);
+	
+	Mat binary_output_color;
+	addWeighted(binary_output_white, 1, binary_output_yellow, 1, 0, binary_output_color);
+	double max_val;
+	minMaxLoc(binary_output_color, NULL, &max_val, NULL, NULL);
+	binary_output_color = binary_output_color*(1/max_val);
+	threshold(binary_output_color, binary_output_color, 0.4, 1, THRESH_TOZERO);
+	*/
+	time_t t_temp1 = clock();
+	
+	double max_val;
+	/*
+	#ifdef DTREE
+	Mat binary_output_white(warp_row, warp_col, CV_32FC1, Scalar(0)), binary_output_yellow(warp_row, warp_col, CV_32FC1, Scalar(0));
+	#endif
+	#ifdef LREGG
+	Mat binary_output_white(warp_row, warp_col, CV_32SC1, Scalar(0)), binary_output_yellow(warp_row, warp_col, CV_32SC1, Scalar(0));
+	#endif
+	*/
+	
+	Mat binary_output_white(warp_row, warp_col, CV_32FC1, Scalar(0)), binary_output_yellow(warp_row, warp_col, CV_32FC1, Scalar(0));
+	Mat binary_output_color(warp_row, warp_col, CV_32FC1, Scalar(0));
+	
+	__warped_reshape = __warped_raw_image.reshape(1, warp_row*warp_col);
+	__warped_reshape.convertTo(__warped_reshape, CV_32FC1);
+	Mat warp_HLS;
+	cvtColor(__warped_raw_image, warp_HLS, COLOR_BGR2HLS);
+	__warped_reshape_HLS = warp_HLS.reshape(1, warp_row*warp_col);
+	__warped_reshape_HLS.convertTo(__warped_reshape_HLS, CV_32FC1);
+	
+	#ifndef NDEBUG_CL
+	cout << "reshape finished. " << endl;
+	#endif
+	
+	if (__initial_frame || __BGR_tree->getRoots().empty() || __HLS_tree->getRoots().empty() ) // __nframe == 0
+	{
+		time_t t_temp2 = clock();
+		/*
+		binary_output_white.convertTo(binary_output_white,CV_32FC1);
+		binary_output_yellow.convertTo(binary_output_yellow,CV_32FC1);
+		*/
+		colorThresh(__warped_raw_image, filter_binary, __b_thresh, 0, "rgb");
+		binary_output_white = binary_output.mul(filter_binary);
+		
+		#ifndef NDEBUG_CL
+		imshow("masked b-", filter_binary); // no need to namedWindow
+		#endif
+		colorThresh(__warped_raw_image, filter_binary, __g_thresh, 1, "rgb");
+		binary_output_white = binary_output_white.mul(filter_binary);
+		#ifndef NDEBUG_CL
+		imshow("masked g-", filter_binary);
+		#endif
+		colorThresh(__warped_raw_image, filter_binary, __r_thresh, 2, "rgb");
+		binary_output_white = binary_output_white.mul(filter_binary);
+		#ifndef NDEBUG_CL
+		imshow("masked r-", filter_binary);
+		#endif
+		colorThresh(__warped_raw_image, filter_binary, __h_thresh, 0, "hls");
+		binary_output_white = binary_output_white.mul(filter_binary);
+		#ifndef NDEBUG_CL
+		imshow("masked h-", filter_binary);
+		#endif
+		colorThresh(__warped_raw_image, filter_binary, __l_thresh, 1, "hls");
+		binary_output_white = binary_output_white.mul(filter_binary);
+		#ifndef NDEBUG_CL
+		imshow("masked l-", filter_binary);
+		#endif
+		colorThresh(__warped_raw_image, filter_binary, __s_thresh, 2, "hls");
+		binary_output_white = binary_output_white.mul(filter_binary);
+		#ifndef NDEBUG_CL
+		imshow("masked s-", filter_binary);
+		#endif
+		threshold(binary_output_white, binary_output_white, 0.06, 1, THRESH_TOZERO);
+		
+		binary_output_white.setTo(0, warp_mask);
+		
+		minMaxLoc(binary_output_white, NULL, &max_val, NULL, NULL);
+		binary_output_color = binary_output_white*(1/max_val);
+		
+		time_t t_temp3 = clock();
+		cout << "Reshaped: " << to_string(((float)(t_temp2 - t_temp1))/CLOCKS_PER_SEC) << "s. Thresholded: ";
+				cout << to_string(((float)(t_temp3 - t_temp2))/CLOCKS_PER_SEC) <<"s. Total: ";
+				cout << to_string(((float)(t_temp3 - t_temp1))/CLOCKS_PER_SEC) << endl;
+		
+		#ifndef NDEBUG
+		imshow("color binary", binary_output_color);
+		//waitKey(0);
+		#endif
+	}
+	else
+	{
+		time_t t_temp2 = clock();
+		/*
+		Mat warped_reshape_sub, warped_reshape_sub_HLS;
+		vector<Point> sub_pts;
+		//__reshapeSub((int)__window_half_width*2, __warped_reshape, __warped_reshape_HLS, warped_reshape_sub, warped_reshape_sub_HLS, sub_pts, binary_output_white, binary_output_yellow);
+		__reshapeSub((int)__window_half_width*2, __warped_reshape, __warped_reshape_HLS, warped_reshape_sub, warped_reshape_sub_HLS, sub_pts);
+		*/
+		
+		#ifdef DTREE
+		__BGR_tree->predict(__warped_reshape, binary_output_white);
+		__HLS_tree->predict(__warped_reshape_HLS, binary_output_yellow);
+		#endif
+		#ifdef LREGG
+		__BGR_regg->predict(__warped_reshape, binary_output_white);
+		__HLS_regg->predict(__warped_reshape_HLS, binary_output_yellow);
+		binary_output_white.convertTo(binary_output_white, CV_32FC1);
+		binary_output_yellow.convertTo(binary_output_yellow, CV_32FC1);
+		#endif
+		
+		/*
+		Mat sub_resp_BGR, sub_resp_HLS;
+		#ifdef DTREE
+		__BGR_tree->predict(warped_reshape_sub, sub_resp_BGR);
+		__HLS_tree->predict(warped_reshape_sub_HLS, sub_resp_HLS);
+		#endif
+		#ifdef LREGG
+		__BGR_regg->predict(warped_reshape_sub, sub_resp_BGR);
+		__HLS_regg->predict(warped_reshape_sub_HLS, sub_resp_HLS);
+		sub_resp_BGR.convertTo(sub_resp_BGR, CV_32FC1);
+		sub_resp_HLS.convertTo(sub_resp_HLS, CV_32FC1);
+		#endif
+		cout << "size of sub_resp: " << sub_resp_BGR.size() << " " << sub_resp_HLS.size()  << endl;
+		cout << "size of reshape_sub: " << warped_reshape_sub.size() << " " << warped_reshape_sub_HLS.size() << endl;
+ 		int n_sub = warped_reshape_sub.rows;
+		for (int i = 0; i < n_sub; i++)
+		{
+			binary_output_white.at<float>(sub_pts[i]) = sub_resp_BGR.at<float>(i);
+			binary_output_yellow.at<float>(sub_pts[i]) = sub_resp_HLS.at<float>(i);
+		}
+		*/
+		
+		time_t t_temp3 = clock();
+		
+		binary_output_white = binary_output_white.reshape(1, warp_row);
+		binary_output_yellow = binary_output_yellow.reshape(1, warp_row);
+		
+		binary_output_color = (binary_output_white + binary_output_yellow)*0.5; // two possible values: 0.5 or 1 
+		
+		double max_val_bi;
+		minMaxLoc(binary_output_color, NULL, &max_val_bi, NULL, NULL);
+		cout << "max of binary_output_color: " << max_val_bi << endl;
+		
+		binary_output_color.setTo(0, warp_mask);
+		
+		time_t t_temp4 = clock();
+		cout << "Reshaped: " << to_string(((float)(t_temp2 - t_temp1))/CLOCKS_PER_SEC) << "s. Predicted: ";
+				cout << to_string(((float)(t_temp3 - t_temp2))/CLOCKS_PER_SEC) <<"s. Reshaped: ";
+				cout << to_string(((float)(t_temp4 - t_temp3))/CLOCKS_PER_SEC) <<"s. Total: ";
+				cout << to_string(((float)(t_temp4 - t_temp1))/CLOCKS_PER_SEC) << endl;
+		
+		#ifndef NDEBUG
+		cout << binary_output_white.size() << endl;
+		cout << binary_output_yellow.size() << endl;
+		cout << "reshape new color filter. " << endl;
+		imshow("color binary", binary_output_color);
+		//waitKey(0);
+		#endif
+		#ifndef NDEBUG_CL
+		imshow("BGR binary", binary_output_white);
+		imshow("HLS binary", binary_output_yellow);
+		//waitKey(0);
+		#endif
+	}
+	
+	
+	
+	time_t t_temp5 = clock();
+	/// gradient filter
+	Mat sobelx, sobely;
+	Sobel(gray, sobelx, CV_32F, 1, 0, __sobel_kernel_size );
+	Sobel(gray, sobely, CV_32F, 0, 1, __sobel_kernel_size );
+	
+	sobelx.copyTo(__sobelx); // for __makeUpFilter
+	
+	Mat sobel_xp, sobel_xn;
+	threshold(sobelx, sobel_xp, 0, 1, THRESH_TOZERO);
+	sobel_xn = -sobelx;
+	threshold(sobel_xn, sobel_xn, 0, 1, THRESH_TOZERO);
+	
+	Mat filter_binary_x_p, filter_binary_x_n, filter_binary_dir;
+	sobelAbsThresh(sobel_xp, filter_binary_x_p, __abs_x_thresh_pre);
+	sobelAbsThresh(sobel_xn, filter_binary_x_n, __abs_x_thresh_pre);
+	sobelDirThresh(sobelx, sobely, filter_binary_dir, __dir_thresh);
+	
+	time_t t_temp6 = clock();
+	
+	filter_binary_x_p = filter_binary_x_p & filter_binary_dir;
+	filter_binary_x_n = filter_binary_x_n & filter_binary_dir;
+	
+	__filter_binary_x_n = filter_binary_x_n;  // for __makeUpFilter
+	__filter_binary_x_p = filter_binary_x_p;
+	
+	int dilate_width = max( (int)round(__window_half_width*0.4),4);
+	int move_dist = max( (int)round(__window_half_width*0.2),2);
+	
+	cout << "dilate width: " << dilate_width << endl; // /5
+	#ifndef NDEBUG_GR
+	imshow("filter_binary_p", filter_binary_x_p);
+	imshow("filter_binary_n", filter_binary_x_n);
+	#endif
+	Mat filter_binary_p_move(filter_binary_x_p.size(), filter_binary_x_p.type(), Scalar(0));
+	Mat filter_binary_n_move(filter_binary_x_p.size(), filter_binary_x_p.type(), Scalar(0));
+	filter_binary_p_move.colRange(move_dist, warp_col) = filter_binary_x_p.colRange(0, warp_col - move_dist) + 0;
+	filter_binary_n_move.colRange(0, warp_col - move_dist) = filter_binary_x_n.colRange(move_dist, warp_col) + 0;
+	#ifndef NDEBUG_GR
+	imshow("filter_binary_p_dilate 1", filter_binary_p_move);
+	imshow("filter_binary_n_dilate 1", filter_binary_n_move);
+	#endif
+	cout << "move dist: " << move_dist << endl;
+	Mat expand_kernel = getStructuringElement(MORPH_RECT, Size(dilate_width, 1));
+	cout << "expand_kernel size: " << expand_kernel.size() << endl;
+	dilate(filter_binary_p_move, filter_binary_p_move, expand_kernel);
+	dilate(filter_binary_n_move, filter_binary_n_move, expand_kernel);
+	#ifndef NDEBUG_GR
+	imshow("filter_binary_p_dilate", filter_binary_p_move);
+	imshow("filter_binary_n_dilate", filter_binary_n_move);
+	#endif
+	Mat binary_output_gradient = filter_binary_p_move & filter_binary_n_move;
+	
+	#ifndef NDEBUG_GR
+	imshow("binary_output_gradient 1", binary_output_gradient);
+	#endif
+	
+	sobelx.setTo(0, ~binary_output_gradient);
+	Mat abs_sobelx = abs(sobelx);
+	binary_output_gradient.convertTo(binary_output_gradient, binary_output_color.type(), 0 ); // 1.0/(255.0*2)
+	
+	Mat sobel_xtop(warp_row, warp_col, CV_32FC1, Scalar(0));
+	Mat sobel_xbot(warp_row, warp_col, CV_32FC1, Scalar(0));
+	sobel_xtop.rowRange(0, warp_row/2) = abs_sobelx.rowRange(0, warp_row/2) + 0;
+	sobel_xbot.rowRange(warp_row/2, warp_row) = abs_sobelx.rowRange(warp_row/2, warp_row) + 0;
+	
+	Mat filter_binary_x_top, filter_binary_x_bot;
+	sobelAbsThresh(sobel_xtop, filter_binary_x_top, __abs_x_thresh);
+	sobelAbsThresh(sobel_xbot, filter_binary_x_bot, __abs_x_thresh);
+	binary_output_gradient.setTo(1, filter_binary_x_top | filter_binary_x_bot);
+	
+	#ifndef NDEBUG_GR
+	imshow("binary_output_gradient 2", binary_output_gradient); // two possible values: 0.5 or 1
+	waitKey(0);
+	#endif
+	
+	
+	#ifndef NDEBUG
+	imshow("gradient binary", binary_output_gradient);
+	//waitKey(0);
+	#endif
+	
+	//Mat mask = binary_output_color <= 0;
+	//binary_output_gradient.setTo(0, mask);
+	
+	time_t t_temp7 = clock();
+	
+	/// combine together
+	Mat binary_output_final;
+	addWeighted(binary_output_color, 1, binary_output_gradient, 1, 0, binary_output_final); // four possible values: 0.25, 0.5, 0.75, 1
+	
+	minMaxLoc(binary_output_final, NULL, &max_val, NULL, NULL);
+	binary_output_final = binary_output_final*(1/max_val);
+	threshold(binary_output_final, __warped_filter_image, 0.4, 1, THRESH_TOZERO); // filter out the lowest possibility
+	
+	#ifndef NDEBUG
+	imshow("overall binary", __warped_filter_image);
+	//waitKey(0);
+	#endif
+	
+	time_t t_temp8 = clock();
+	cout << "Gradient processed: " << to_string(((float)(t_temp6 - t_temp5))/CLOCKS_PER_SEC) << "s. Thresholded: ";
+		cout << to_string(((float)(t_temp7 - t_temp6))/CLOCKS_PER_SEC) <<"s. Combined: ";
+			cout << to_string(((float)(t_temp8 - t_temp7))/CLOCKS_PER_SEC) <<"s. Total: ";
+			cout << to_string(((float)(t_temp8 - t_temp5))/CLOCKS_PER_SEC) <<"s. " << endl;
+	return;
+}
+
+void colorThresh(const Mat& image, Mat& binary_output, Vec2f thresh, int layer, string colormap)
+{
+	Mat image_cur;
+	if (colormap == "hls")
+		cvtColor(image, image_cur, COLOR_BGR2HLS); // RGB or BGR???
+	else
+		image_cur = image; // not copied
+		
+	Mat color_channel(warp_row, warp_col, CV_8UC1);
+	int from_to[2] = {layer, 0};
+	mixChannels(image_cur, color_channel, from_to, 1);
+	
+	binary_output = Mat::ones(color_channel.size(), CV_32FC1);
+	Mat mask = (color_channel <= thresh[0]) | (color_channel >= thresh[1]);
+	binary_output.setTo(0.5, mask);
+	return;
+}
+
+
+void sobelAbsThresh(const Mat& abs_sobel, Mat& binary_output, Vec2f thresh)
+{
+	// Mat abs_sobel;
+	// threshold(abs_sobel, abs_sobel, 0, 1, THRESH_TOZERO);
+	
+	//Mat abs_sobel = abs(sobel);
+	
+	//normalize(abs_sobel, abs_sobel, 0, 255, NORM_MINMAX );
+	double max_val;
+	minMaxLoc(abs_sobel, NULL, &max_val, NULL, NULL);
+	float thresh_l = thresh[0]/255*max_val;
+	float thresh_h = thresh[1]/255*max_val;
+	
+	binary_output = (abs_sobel >= thresh_l) & (abs_sobel <= thresh_h);
+	
+	#ifndef NDEBUG_GR
+	imshow("sobel abs", binary_output);
+	waitKey(0);
+	#endif
+	
+	return;
+}
+
+
+void sobelDirThresh(const Mat& sobelx, const Mat& sobely, Mat& binary_output, Vec2f thresh)
+{
+	Mat sobel_dir;
+	phase(abs(sobelx), abs(sobely), sobel_dir); // not in degree
+	//normalize(sobel_dir, sobel_dir, 0, 255, NORM_MINMAX ); // normalized to 0-255
+	double max_val, min_val;
+	minMaxLoc(sobel_dir, &min_val, &max_val, NULL, NULL);
+	float thresh_l = thresh[0]/255*(max_val - min_val) + min_val;
+	float thresh_h = thresh[1]/255*(max_val - min_val) + min_val;
+	
+	binary_output = (sobel_dir >= thresh_l) & (sobel_dir <= thresh_h );
+	
+	#ifndef NDEBUG_GR
+	imshow("sobel dir", binary_output);
+	#endif
+	
+	return;
+}
+
+
+void LaneImage::__laneBase(int& hist_width)
+{
+	if ( __initial_frame ) // originally only left
+	{
+		/// histogram to find the base for fitting
+		Mat histogram(1, warp_col, CV_32FC1, Scalar(0));
+		//float* line_his = histogram.ptr<float>();
+		for (int i = warp_row/2; i < warp_row; i++ )
+		{
+			//const float* line = __warped_filter_image.ptr<float>(i);
+			//for (int j = 0; j < warp_col; j++)
+				//line_his[j] += line[j];
+			histogram += __warped_filter_image.row(i);
+		}
+		
+		int midpoint = warp_col/2;
+		double max_histogram_l, max_histogram_r;
+		minMaxIdx(histogram.colRange(0, midpoint), NULL, &max_histogram_l, NULL, NULL);
+		minMaxIdx(histogram.colRange(midpoint, warp_col), NULL, &max_histogram_r, NULL, NULL);
+		
+		/// finding peaks and prefer peaks that do not have other peaks in between
+		int min_peak_dist = warp_col / 40;
+		float min_height_diff_l = max_histogram_l/3, min_height_diff_r = max_histogram_r/3; // 5
+		float min_height_l = min_height_diff_l, min_height_r = min_height_diff_r;
+		vector<int> max_loc_l, max_loc_r;
+		vector<float> max_val_l, max_val_r;
+		extractPeaks(histogram.colRange(0, midpoint), min_peak_dist, min_height_diff_l, min_height_l, max_loc_l, max_val_l);
+		extractPeaks(histogram.colRange(midpoint, warp_col), min_peak_dist, min_height_diff_r, min_height_r, max_loc_r, max_val_r);
+		Mat hist_peaks(1, warp_col, CV_32FC1, Scalar(0));
+		for (int i = 0; i < max_loc_l.size(); i++)
+		{
+				//float sub_max = 0;
+				float cur_peak = max_val_l[i];
+				for (int j = i; j < max_loc_l.size(); j++)
+				{
+					if (j > i) // && max_loc[j] < warp_col/2 && max_val[j] > sub_max)
+					{
+						//sub_max = max_val[j];
+						cur_peak = cur_peak - 2*max_val_l[j];
+					}
+				}
+				hist_peaks.at<float>( max_loc_l[i] ) = cur_peak; // max_val[i] - sub_max;
+		}
+		for (int i = 0; i < max_loc_r.size(); i++)
+		{
+				//float sub_max = 0;
+				float cur_peak = max_val_r[i];
+				for (int j = i; j >= 0; j--)
+				{
+					if (j < i  ) // && max_loc[j] > warp_col/2 && max_val[j] > sub_max)
+					{
+						//sub_max = max_val[j];
+						cur_peak = cur_peak - 2*max_val_r[j];
+					}
+				}
+				hist_peaks.at<float>( max_loc_r[i] + midpoint ) = cur_peak; // max_val[i] - sub_max;
+		}
+		
+		/// extract peaks in histogram
+		
+		//if (__first_sucs) // only the very first time initialization succeeds
+		//{
+			int leftx_base_p[2];
+			int rightx_base_p[2];
+			/*
+			Mat mask_hist(1, warp_col, CV_8UC1, Scalar(0));
+			Mat inv_mask_hist(1, warp_col, CV_8UC1, Scalar(0));
+			uchar* line_mask = mask_hist.ptr();
+			uchar* inv_line_mask = inv_mask_hist.ptr();
+			for (int i = 0; i < midpoint; i++) 
+			{
+				line_mask[i] = 255;
+				inv_line_mask[warp_col - 1 - i] = 255;
+			}
+			*/
+			minMaxIdx(hist_peaks.colRange(0, midpoint), NULL, NULL, NULL, leftx_base_p); //histogram.colRange(0, midpoint)
+			minMaxIdx(hist_peaks.colRange(midpoint, warp_col), NULL, NULL, NULL, rightx_base_p);
+			__leftx_base = leftx_base_p[1];
+			__rightx_base = rightx_base_p[1] + midpoint;
+			if (__first_sucs) // otherwise hist_width is not updated here
+				hist_width = __rightx_base - __leftx_base;
+		//}
+		//else // disabled since only peaks are used for finding base, the restriction of hist_width may result in no peaks found
+		//{
+			//float cur_max = 0;
+			//for (int dist = hist_width - 5; dist < hist_width + 5; dist ++)
+			//{
+				//for (int cur_left = midpoint - dist; cur_left < midpoint; cur_left ++)
+				//{
+					//if (cur_left < 0)
+						//continue;
+					//int cur_right = cur_left + dist;
+					//if (cur_right > warp_col - 1)
+						//break;
+					//if ( histogram.at<float>(cur_left) + histogram.at<float>(cur_right) > cur_max)
+					//{
+						//__leftx_base = cur_left;
+						//__rightx_base = cur_right;
+						//cur_max = histogram.at<float>(cur_left) + histogram.at<float>(cur_right);
+					//}
+				//}
+			//}
+		//}
+	}
+	else
+	{
+		__leftx_base = 0;
+		__rightx_base = 0; // then not used
+	}
+	cout << "leftx_base: " << __leftx_base << " , right_base: " << __rightx_base << endl;
+	return;
+}
+
+
+void LaneImage::__ROIInds(int half_width, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds )
+{
+	float frow = (float)warp_row;
+	float window_height = warp_row/__window_number;
+	if ( __initial_frame )	// originally only left
+	{
+		/// find pixels in windows from bottom up
+		float leftx_cur = __leftx_base;
+		float rightx_cur = __rightx_base;
+		
+		valarray<bool> good_left_inds, good_right_inds;
+
+		for (int i = 0; i < __window_number; i++)
+		{
+			float win_y_low = warp_row - (i+1)*window_height;
+			float win_y_high = warp_row - i*window_height;
+			float win_xleft_low = leftx_cur - half_width;
+			float win_xleft_high = leftx_cur + half_width;
+			float win_xright_low = rightx_cur - half_width;
+			float win_xright_high = rightx_cur + half_width;
+			good_left_inds = (nonzy >= win_y_low) & (nonzy <= win_y_high) & (nonzx >= win_xleft_low) & (nonzx <= win_xleft_high);
+			good_right_inds = (nonzy >= win_y_low) & (nonzy <= win_y_high) & (nonzx >= win_xright_low) & (nonzx <= win_xright_high);
+			
+			left_lane_inds = left_lane_inds | good_left_inds;
+			right_lane_inds = right_lane_inds | good_right_inds;
+			
+			valarray<float> nonzx_cur_left(nonzx[good_left_inds]);
+			valarray<float> nonzx_cur_right(nonzx[good_right_inds]);
+			if (nonzx_cur_left.size() > __window_min_pixel)
+				leftx_cur = nonzx_cur_left.sum()/nonzx_cur_left.size();
+			if (nonzx_cur_right.size() > __window_min_pixel)
+				rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
+		}
+	}
+	else
+	{
+		
+		left_lane_inds = (nonzx > (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] - half_width))
+		& (nonzx < (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] + half_width));
+		right_lane_inds = (nonzx > (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] - half_width))
+		& (nonzx < (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] + half_width)); // formula's y is from downside
+		
+		/*
+		left_lane_inds = (nonzx > (__avg_hist_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__avg_hist_left_fit[1]*(frow - 1 - nonzy) + __avg_hist_left_fit[0] - half_width))
+		& (nonzx < (__avg_hist_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__avg_hist_left_fit[1]*(frow - 1 - nonzy) + __avg_hist_left_fit[0] + half_width));
+		right_lane_inds = (nonzx > (__avg_hist_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__avg_hist_right_fit[1]*(frow - 1 - nonzy) + __avg_hist_right_fit[0] - half_width))
+		& (nonzx < (__avg_hist_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__avg_hist_right_fit[1]*(frow - 1 - nonzy) + __avg_hist_right_fit[0] + half_width));
+		*/
+	}
+	return;
+}
+
+void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty)
+{
+	Mat filter_binary_half(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0)); // store only one-side-edge
+	if (left)
+		filter_binary_half.colRange(0, warp_col/2) = __filter_binary_x_n.colRange(0, warp_col/2) + 0; // left: bright-to-dark, sobelx is negative
+	else
+		filter_binary_half.colRange(warp_col/2, warp_col) = __filter_binary_x_p.colRange(warp_col/2, warp_col) + 0;
+	
+	__sobelx.setTo(0, ~filter_binary_half); // __sobelx is the original sobelx before this step
+	
+	Mat abs_sobelx = abs(__sobelx);
+	
+	Mat sobel_xtop(warp_row, warp_col, CV_32FC1, Scalar(0));
+	Mat sobel_xbot(warp_row, warp_col, CV_32FC1, Scalar(0));
+	sobel_xtop.rowRange(0, warp_row/2) = abs_sobelx.rowRange(0, warp_row/2) + 0;
+	sobel_xbot.rowRange(warp_row/2, warp_row) = abs_sobelx.rowRange(warp_row/2, warp_row) + 0;
+	
+	Mat filter_binary_x_top, filter_binary_x_bot;
+	sobelAbsThresh(sobel_xtop, filter_binary_x_top, __abs_x_thresh);
+	sobelAbsThresh(sobel_xbot, filter_binary_x_bot, __abs_x_thresh);
+	__warped_filter_image.setTo(0.5, filter_binary_x_top | filter_binary_x_bot);
+	
+	#ifndef NDEBUG
+	imshow("overall binary make-up", __warped_filter_image);
+	//waitKey(0);
+	#endif
+	
+	
+	//Mat warped_filter_image_U;
+	__warped_filter_image.convertTo(warped_filter_image_U, CV_8U, 255, 0 );
+	int from_to[] = {0,0, 0,1, 0,2};
+	Mat out[] = {__lane_window_out_img, __lane_window_out_img, __lane_window_out_img};
+	mixChannels(&warped_filter_image_U, 1, out, 3, from_to, 3);
+	
+	float frow = (float)warp_row;
+	
+	/// find all non-zero pixels
+	//vector<Point> nonz_loc;
+	findNonZero(warped_filter_image_U, nonz_loc);
+	
+	cout << "# of non-zero pixels: " << nonz_loc.size() << endl;
+	
+	//valarray<float> nonzx(nonz_loc.size()), nonzy(nonz_loc.size());
+	nonzx.resize(nonz_loc.size());
+	nonzy.resize(nonz_loc.size());
+	
+	for (vector<Point>::iterator it = nonz_loc.begin() ; it != nonz_loc.end(); it++)
+	{
+		nonzx[it - nonz_loc.begin()] = (*it).x;
+		nonzy[it - nonz_loc.begin()] = (*it).y;
+	}
+	valarray<bool> left_lane_inds(false, nonzx.size());
+	valarray<bool> right_lane_inds(false, nonzx.size());
+	
+	/// find interested pixels
+	__laneBase(hist_width);
+	__ROIInds(__window_half_width, nonzx, nonzy, left_lane_inds, right_lane_inds);
+	
+	leftx = valarray<float>(nonzx[left_lane_inds]);
+	lefty = valarray<float>(nonzy[left_lane_inds]);
+	rightx = valarray<float>(nonzx[right_lane_inds]);
+	righty = valarray<float>(nonzy[right_lane_inds]);
+	
+	//valarray<float> leftx(nonzx[left_lane_inds]);
+	//valarray<float> lefty(nonzy[left_lane_inds]);
+	//valarray<float> rightx(nonzx[right_lane_inds]);
+	//valarray<float> righty(nonzy[right_lane_inds]);
+	
+	cout << "# of left pixels:  " << leftx.size() << endl;
+	cout << "# of right pixels: " << rightx.size() << endl;
+}
+
+
+
+
+
+
+void LaneImage::get_vanishing_point(Mat inv_per_mtx)
+{
+	float frow = (float)warp_row;
+	
+	valarray<bool> left_lane_inds = __lefty > frow/2;
+	valarray<bool> right_lane_inds = __righty > frow/2;
+	
+	valarray<float> leftx(__leftx[left_lane_inds]);
+	valarray<float> rightx(__rightx[right_lane_inds]);
+	valarray<float> lefty(__lefty[left_lane_inds]);
+	valarray<float> righty(__righty[right_lane_inds]);
+	
+	vector<Point2f> ori_pts_van;
+	
+	if (leftx.size() > __leftx.size()/4 && rightx.size() > __rightx.size()/4) // pixels in lower part are more than a threshold
+	{
+		size_t length_left = leftx.size();
+		size_t length_right = rightx.size();
+			
+		Mat X_left(1, length_left, CV_32F);
+		Mat X_right(1, length_right, CV_32F);
+		Mat Y_left(2, length_left, CV_32F, Scalar_<float>(1));
+		Mat Y_right(2, length_right, CV_32F, Scalar_<float>(1));
+			
+		float* line_Yl1 = Y_left.ptr<float>(1);
+		float* line_Xl = X_left.ptr<float>();
+		float* line_Yr1 = Y_right.ptr<float>(1);
+		float* line_Xr = X_right.ptr<float>();
+			
+		for (int i = 0; i < length_left; i++)
+		{
+			line_Yl1[i] = (frow - 1 - lefty[i]); // from downside
+			line_Xl[i] = leftx[i];
+		}
+		for (int i = 0; i < length_right; i++)
+		{
+			line_Yr1[i] = (frow - 1 -righty[i]);
+			line_Xr[i] = rightx[i];
+		}
+		// fit linear model to the down-half of selected pixels for finding vanishing point for next frame
+				
+		Mat left_fit = (Y_left.t()).inv(DECOMP_SVD)*(X_left.t());
+		__left_fit_2 = left_fit;
+		Mat right_fit = (Y_right.t()).inv(DECOMP_SVD)*(X_right.t());
+		__right_fit_2 = right_fit;
+		
+		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - lefty.max()) + __left_fit_2[0], lefty.max())); // the y in the linear model is different from the real y index
+		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - lefty.min()) + __left_fit_2[0], lefty.min()));
+		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - righty.max()) + __right_fit_2[0], righty.max()));
+		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - righty.min()) + __right_fit_2[0], righty.min()));
+	}
+	else
+	{
+		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - __lefty.max()) + __left_fit_2[0], __lefty.max())); // the y in the linear model is different from the real y index
+		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - __lefty.min()) + __left_fit_2[0], __lefty.min()));
+		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - __righty.max()) + __right_fit_2[0], __righty.max()));
+		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - __righty.min()) + __right_fit_2[0], __righty.min()));
+	}
+	
+	
+	vector<Point2f> trs_pts_van;
+	perspectiveTransform(ori_pts_van, trs_pts_van, inv_per_mtx);
+	
+	__left_fit_2_img[1] = - (trs_pts_van[1].x - trs_pts_van[0].x)/(trs_pts_van[1].y - trs_pts_van[0].y); // The k in x = ky+b.negative because of the flipped y
+	__left_fit_2_img[0] = trs_pts_van[1].x - __left_fit_2_img[1]*(frow - 1 - trs_pts_van[1].y);
+	__right_fit_2_img[1] = - (trs_pts_van[3].x - trs_pts_van[2].x)/(trs_pts_van[3].y - trs_pts_van[2].y); // The k in x = ky+b.negative because of the flipped y
+	__right_fit_2_img[0] = trs_pts_van[3].x - __right_fit_2_img[1]*(frow - 1 - trs_pts_van[3].y);
+	
+	/*
+	cout << "left linear model:  " << __left_fit_2_img << endl;
+	cout << "right linear model: " << __right_fit_2_img << endl;
+	*/
+	
+	__van_pt.y = - (__left_fit_2_img[0] - __right_fit_2_img[0])/(__left_fit_2_img[1] - __right_fit_2_img[1]);
+	__van_pt.x = __left_fit_2_img[1]*__van_pt.y + __left_fit_2_img[0];
+	__van_pt.y = frow - 1 - __van_pt.y;
+	
+	cout << "vanishing point: " << __van_pt << endl;
+	
+	// if points are few, using linear model to replace second order model
+	if (__lefty.min() > frow/2)
+	{
+		__left_fit[2] = 0;
+		__left_fit[1] = __left_fit_2[1];
+		__left_fit[0] = __left_fit_2[0];
+		__left_fit_cr[2] = 0;
+		__left_fit_cr[1] = __left_fit[1]*xm_per_pix/ym_per_pix;
+		__left_fit_cr[0] = __left_fit[0]*xm_per_pix/ym_per_pix/ym_per_pix;
+		cout << "Left lane using linear model. " << endl;
+	}
+	if (__righty.min() > frow/2)
+	{
+		__right_fit[2] = 0;
+		__right_fit[1] = __right_fit_2[1];
+		__right_fit[0] = __right_fit_2[0];
+		__right_fit_cr[2] = 0;
+		__right_fit_cr[1] = __right_fit[1]*xm_per_pix/ym_per_pix;
+		__right_fit_cr[0] = __right_fit[0]*xm_per_pix/ym_per_pix/ym_per_pix;
+		cout << "Right lane using linear model. " << endl;
+	}
+	
+	return;
+	
+}
+
+
+void LaneImage::__laneSanityCheck(int hist_width) // consistent with function getLaneWidthWarp
+{
+
+	/// average lane width in warped image
+	float y_eval_loc = 0; // changed to counting from closer side
+	valarray<float> y_eval(y_eval_loc, 10);
+	float step = warp_row/10;
+	for (int i = 1; i<10; i++)
+		y_eval[i] = y_eval[i-1] + step; // changed to counting from closer side
+	valarray<float> x_l(10);
+	valarray<float> x_r(10);
+	x_l = __left_fit[2]*y_eval*y_eval + __left_fit[1]*y_eval + __left_fit[0];
+	x_r = __right_fit[2]*y_eval*y_eval + __right_fit[1]*y_eval + __right_fit[0];
+	valarray<float> x_dist = abs(x_r-x_l);
+	__dif_dist = x_dist.max()/x_dist.min();
+	
+	valarray<float> curvature_l(10);
+	valarray<float> curvature_r(10);
+	curvature_l = abs(2*__left_fit[2])/pow(( 1 + pow(( 2*__left_fit[2]*y_eval + __left_fit[1]), 2)),1.5);
+	curvature_r = abs(2*__right_fit[2])/pow(( 1 + pow(( 2*__right_fit[2]*y_eval + __right_fit[1]), 2)),1.5);
+	valarray<float> curve_dist = abs(curvature_l-curvature_r);
+	valarray<float> curve_time_a = curvature_l/curvature_r;
+	valarray<float> curve_time_b = curvature_r/curvature_l;
+	__dif_curve = curve_dist.max();
+	__time_curve = max( curve_time_a.max(), curve_time_b.max() );
+	
+	cout << "Left curvature: ";
+	for (int i = 0; i < 10; i++)
+	{
+		cout << curvature_l[i] << " ";
+	}
+	cout << endl;
+	cout << "Right curvature: ";
+	for (int i = 0; i < 10; i++)
+	{
+		cout << curvature_r[i] << " ";
+	}
+	cout << endl;
+	
+	cout << "Change of lane width: " << __dif_dist << "Diff of curvature: " << __dif_curve << "Time of curve: " << __time_curve << endl;
+
+		__parallel_check = ( (abs(__left_fit[2]-__right_fit[2])+abs(__left_fit[1]-__right_fit[1])) < 0.2) && __dif_dist < 1.3 && (__dif_curve < 0.0004 || __time_curve < 2); // can change later
+		/*
+		float dist2left = left_lane.line_base_pos.back();
+		float dist2right = right_lane.line_base_pos.back();
+        bool lane_width_check = ((abs(dist2right) + abs(dist2left)) < 3.7) && ((abs(dist2right) + abs(dist2left)) > 3.0);
+        */
+        __bot_width = abs(__left_fit[0]-__right_fit[0]);
+        __width_check = ( __bot_width > 0.8 * hist_width && __bot_width < 1.2*hist_width  && __bot_width > warp_col/8);
+        cout << "para check" << __parallel_check << "width check" << __width_check << endl;
+        // width check disabled temporally
+		return ;// && lane_width_check;
+
+}
+
+float LaneImage::__getCurveDiff(Vec3f& cur_fit, Vec3f& hist_fit) // consistent with function getLaneWidthWarp
+{
+	/// average lane width in warped image
+	float y_eval_loc = warp_row/2; // changed to counting from closer side
+	valarray<float> y_eval(y_eval_loc, 6);
+	float step = warp_row/10;
+	for (int i = 1; i<6; i++)
+		y_eval[i] = y_eval[i-1] + step; // changed to counting from closer side
+	valarray<float> curvature_l(6);
+	valarray<float> curvature_r(6);
+	curvature_l = (2*cur_fit[2])/pow(( 1 + pow(( 2*cur_fit[2]*y_eval + cur_fit[1]), 2)),1.5);
+	curvature_r = (2*hist_fit[2])/pow(( 1 + pow(( 2*hist_fit[2]*y_eval + hist_fit[1]), 2)),1.5);  // save the sign
+	
+	valarray<float> x_dist = abs(curvature_l-curvature_r);
+	float dif_max = x_dist.max();
+	
+	return dif_max;
+
+}
+
+float LaneImage::__getDiff(Vec3f& cur_fit, Vec3f& hist_fit) // max distance of current result from history
+{
+	/*
+	/// average lane width in warped image
+	float y_eval_loc = 0; // changed to counting from closer side
+	valarray<float> y_eval(y_eval_loc, 11);
+	float step = warp_row/10;
+	for (int i = 1; i<11; i++)
+		y_eval[i] = y_eval[i-1] + step; // changed to counting from closer side
+	valarray<float> x_l(11);
+	valarray<float> x_r(11);
+	x_l = cur_fit[2]*y_eval*y_eval + cur_fit[1]*y_eval + cur_fit[0];
+	x_r = hist_fit[2]*y_eval*y_eval + hist_fit[1]*y_eval + hist_fit[0];
+	valarray<float> x_dist = abs(x_r-x_l);
+	float dif_max = x_dist.max();
+	*/
+	float dif_max = abs(cur_fit[2] - hist_fit[2]);
+	if (cur_fit[2] * hist_fit[2] < 0)
+		dif_max = - dif_max;
+	
+	return dif_max;// && lane_width_check;
+
+}
+
+
+void extractPeaks(const Mat& src, const int min_peak_dist, const float min_height_diff, const float min_height, vector<int>& max_loc, vector<float>& max_val)
+{
+	int ker_size = min_peak_dist;
+	Point cur_max_pt;
+	Point cur_min_pt;
+	double cur_max;
+	double cur_min;
+	
+	max_loc.clear();
+	max_val.clear();
+	/// find local maxima according to rule
+	for (int loc = ker_size; loc < src.cols - ker_size; loc++)
+	{
+		Mat part = src.colRange(loc-ker_size, loc+ker_size);
+		minMaxLoc(part, &cur_min, &cur_max, NULL, &cur_max_pt);
+		if (cur_max_pt.x == ker_size && cur_max - cur_min >= min_height_diff && cur_max >= min_height )
+		{
+			max_loc.push_back(loc);
+			max_val.push_back(cur_max);
+		}
+	}
+	
+	int num_max = max_loc.size();
+	if (num_max <= 0)
+	{
+		cout << "No peaks found. Use maximal value instead: ";
+		minMaxLoc(src, &cur_min, &cur_max, NULL, &cur_max_pt);
+		max_loc.push_back(cur_max_pt.x);
+		max_val.push_back(cur_max);
+		cout << "[" << max_loc[0] << ", " << max_val[0] << "] " << endl;
+	}
+	else
+	{
+		cout << num_max << "Peaks found. ";
+		for (int i = 0; i < num_max; i++)
+		{
+			cout << "[" << max_loc[i] << ", " << max_val[i] << "] ";
+		}
+		cout << endl;
+	}
+}
