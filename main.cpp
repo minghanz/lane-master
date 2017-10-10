@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	LearnModel learn_model;
 
 	float illu_comp = 1;
-	
+	int nframe = 0;
 	
 	#ifdef EVA
 	/// for evaluate
@@ -115,41 +115,45 @@ int main(int argc, char** argv)
 			
 			
 			/// initialize for first frame
-			if ( ! lane_mark.new_result ) //time_step == 0
+			Mat cali_image;
+			if (cali)
 			{
-				Mat cali_image;
-				if (cali) { undistort(image, cali_image, cam_mtx, dist_coeff); }
-				else { image.copyTo(cali_image); } // not copied
-				
-				#ifndef NDEBUG
-				cout << "cali image size" << cali_image.size() << endl;
-				namedWindow("original color", WINDOW_AUTOSIZE);
-				imshow("original color", image);
-				namedWindow("warped color", WINDOW_AUTOSIZE);
-				imshow("warped color", cali_image);
-				#endif
-				
-				/// get vanishing point, warp source region, illumination compensation. 
-				Mat gray;
-				cvtColor(cali_image, gray, COLOR_BGR2GRAY);
-				illuComp(cali_image, gray, illu_comp);
-				van_pt.ini_flag = van_pt.initialVan(cali_image, gray);
+				undistort(image, cali_image, cam_mtx, dist_coeff);
 			}
-			
+			else
+			{
+				image.copyTo(cali_image);
+			} // not copied
+
+			#ifndef NDEBUG
+			// cout << "cali image size" << cali_image.size() << endl;
+			// namedWindow("original color", WINDOW_AUTOSIZE);
+			// imshow("original color", image);
+			// namedWindow("warped color", WINDOW_AUTOSIZE);
+			// imshow("warped color", cali_image);
+			#endif
+
+			/// get vanishing point, warp source region, illumination compensation.
+			Mat gray, warped_img;
+			cvtColor(cali_image, gray, COLOR_BGR2GRAY);
+			illuComp(cali_image, gray, illu_comp);
+			van_pt.initialVan(cali_image, gray, warped_img, lane_mark);
+
 			image = image*illu_comp;
-				
-				clock_t t_now = clock();
-				cout << "Image prepared, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
-				t_last = t_now;
-				
-				LaneImage lane_find_image(image, van_pt, lane_mark, learn_model, cam_mtx, dist_coeff, time_step);
-				
-				t_now = clock();
-				cout << "Image processed, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
-				t_last = t_now;
-	
+
+			clock_t t_now = clock();
+			cout << "Image prepared, using: " << to_string(((float)(t_now - t_last)) / CLOCKS_PER_SEC) << "s. " << endl;
+			t_last = t_now;
+
+
+
+			LaneImage lane_find_image(image, van_pt, lane_mark, learn_model, cam_mtx, dist_coeff, time_step);
+
+			t_now = clock();
+			cout << "Image processed, using: " << to_string(((float)(t_now - t_last)) / CLOCKS_PER_SEC) << "s. " << endl;
+			t_last = t_now;
+
 			lane_mark.recordImgFit(lane_find_image);
-			van_pt.checkClearSeriesVan();
 
 			Mat result;
 			if ( !lane_mark.new_result )
@@ -162,7 +166,7 @@ int main(int argc, char** argv)
 				left_lane.pushNewRecord(lane_find_image, 1);
 				right_lane.pushNewRecord(lane_find_image, 2);
 				
-				van_pt.recordHistVan( lane_find_image, left_lane,  right_lane);
+				// van_pt.recordHistVan( lane_find_image, left_lane,  right_lane);
 
 				left_lane.processNewRecord(van_pt, lane_mark);
 				right_lane.processNewRecord(van_pt, lane_mark);
@@ -172,7 +176,7 @@ int main(int argc, char** argv)
 				lane_mark.recordBestFit(left_lane, right_lane);
 				lane_mark.recordHistFit();
 
-				van_pt.recordBestVan(left_lane, right_lane);
+				// van_pt.recordBestVan(left_lane, right_lane);
 				
 				#ifdef COUT
 				cout << "window half width: " << lane_mark.window_half_width << endl;
@@ -339,57 +343,50 @@ int main(int argc, char** argv)
 			#endif
 				
 
+			/// add results on calibrated image, output the frame
+			addWeighted(lane_find_image.__calibrate_image, 1, newwarp, 0.3, 0, result);
+			//// circle(result, lane_find_image.__best_van_pt, 5, Scalar(0, 0, 255), -1); // should be the same as Point(last_van_pt)
+			Scalar van_color = van_pt.ini_success ? Scalar(0,0,255) : Scalar(0,255,0);
+			circle(result, Point(van_pt.van_pt_ini), 5, van_color, -1); // should be the same as Point(last_van_pt)
 
+			/// add the warped_filter_image to the output image
+			if (van_pt.ini_flag)
+			{
+				Mat small_lane_window_out_img;
+				int small_height = img_size.height*0.4;
+				int small_width = (float)warp_col / (float)warp_row * small_height;
+				resize(lane_find_image.__lane_window_out_img, small_lane_window_out_img, Size(small_width, small_height));
+				result( Range(0, small_height), Range(img_size.width - small_width, img_size.width) ) = small_lane_window_out_img + 0;
+			}
+
+			double fontScale;
+			int thickness;
+			if (image.cols < 900)
+			{
+				fontScale = 0.3;
+				thickness = 1;
+			}
+			else
+			{
+				fontScale = 0.8;
+				thickness = 2;
+			}
+			int fontFace = FONT_HERSHEY_SIMPLEX;
 			if ( !lane_mark.new_result )
 			{
-				addWeighted(lane_find_image.__calibrate_image, 1, newwarp, 0.3, 0, result);
-				
-				if (van_pt.ini_flag == 0) // the LaneImage is processed at least to the fitting stage, meaning that the __lane_window_out_img has been generated
-				{
-					Mat small_lane_window_out_img;
-					int small_height = img_size.height*0.5;
-					int small_width = (float)warp_col / (float)warp_row * small_height;
-					resize(lane_find_image.__lane_window_out_img, small_lane_window_out_img, Size(small_width, small_height));
-					#ifdef COUT
-					cout << small_width << " " << small_height << " " << img_size.width - small_width << " " <<  img_size.width << endl;
-					#endif
-					result( Range(0, small_height), Range(img_size.width - small_width, img_size.width) ) = small_lane_window_out_img + 0;
-				}
-				double fontScale;
-				int thickness;
-				if (image.cols < 900)
-				{
-					fontScale = 0.3;
-					thickness = 1;
-					#ifdef COUT
-					cout << "small image" << endl;
-					#endif
-				}
-				else
-				{
-					fontScale = 0.8;
-					thickness = 2;
-					#ifdef COUT
-					cout << "big image" << endl;
-					#endif
-				}
-				int fontFace = FONT_HERSHEY_SIMPLEX;
-				
 				string TextL = "Frame " + to_string((int)time_step);
-				putText(result, TextL, Point(10, 40), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				putText(result, "Current frame failed.", Point(10, 70), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
+				putText(result, TextL, Point(10, 40), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+				putText(result, "Current frame failed.", Point(10, 70), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 				//// if (lane_find_image.__last_left_fit == Vec3f(0, 0, 0) || lane_find_image.__last_right_fit == Vec3f(0, 0, 0))
 				if (lane_mark.initial_frame)
 				{
 					string TextIni = "Initializing frame. ";
-					putText(result, TextIni, Point(10, 100), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
+					putText(result, TextIni, Point(10, 100), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 				}
 				#ifndef NDEBUG
 				imshow("result", result);
 				waitKey(0);
-				#endif
-				
-				#ifdef NDEBUG
+				#else
 				imshow("result", result);
 				waitKey(1);
 				#endif
@@ -401,89 +398,14 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				/// add results on calibrated image, output the frame
-				addWeighted(lane_find_image.__calibrate_image, 1, newwarp, 0.3, 0, result);
-				//// circle(result, lane_find_image.__best_van_pt, 5, Scalar(0, 0, 255), -1); // should be the same as Point(last_van_pt)
-				circle(result, van_pt.van_pt_best, 5, Scalar(0, 0, 255), -1); // should be the same as Point(last_van_pt)
-				
-				/// add the warped_filter_image to the output image
-				Mat small_lane_window_out_img;
-				int small_height = img_size.height*0.5;
-				int small_width = (float)warp_col / (float)warp_row * small_height;
-				resize(lane_find_image.__lane_window_out_img, small_lane_window_out_img, Size(small_width, small_height));
-				result( Range(0, small_height), Range(img_size.width - small_width, img_size.width) ) = small_lane_window_out_img + 0;
-				
 				#ifdef COUT
-				cout << "revised vanishing point: " << van_pt.van_pt_best << endl;
+				cout << "revised vanishing point: " << van_pt.van_pt_ini << endl;
 				cout << "lateral offset left: " << left_lane.best_line_base_pos << endl;
 				cout << "lateral offset right: " << right_lane.best_line_base_pos << endl;
 				#endif
-				double fontScale;
-				int thickness;
-				if (image.cols < 900)
-				{
-					fontScale = 0.3;
-					thickness = 1;
-					#ifdef COUT
-					cout << "small image" << endl;
-					#endif
-				}
-				else
-				{
-					fontScale = 0.8;
-					thickness = 2;
-					#ifdef COUT
-					cout << "big image" << endl;
-					#endif
-				}
-				int fontFace = FONT_HERSHEY_SIMPLEX;
 				
 				string TextL = "Frame " + to_string((int)time_step);
-				/*
-				string TextR = "Left curv: " + to_string((int)left_lane.best_radius_of_curvature) + "m. " + "Right curv: " + to_string((int)right_lane.best_radius_of_curvature) + "m";
-				string TextC = "Center offset: " + to_string(-left_lane.best_line_base_pos-right_lane.best_line_base_pos) + "m";
-				string TexteqL = "Left:  x = " + to_string(left_lane.best_fit_cr[2]) + " y^2 + " + to_string(left_lane.best_fit_cr[1]) + " y + " + to_string(left_lane.best_fit_cr[0]);
-				string TexteqR = "Right: x = " + to_string(right_lane.best_fit_cr[2]) + " y^2 + " + to_string(right_lane.best_fit_cr[1]) + " y + " + to_string(right_lane.best_fit_cr[0]);
-				string Textang = "Yaw = " + to_string(theta_w) + " deg. Pitch = " + to_string(theta_h) + " deg. ";
-				*/
-				
-				string TextR = "Width time: " + to_string(lane_find_image.__dif_dist) + "; curve diff: " + to_string(lane_find_image.__dif_curve) + 
-					"; curve time: " +  to_string(lane_find_image.__time_curve) + "; paral check: " + to_string(lane_find_image.__parallel_check) ;
-				string TextC = "Bottom width: " + to_string(lane_find_image.__bot_width) + "; hist width: " + to_string(lane_mark.hist_width)+ "; width check: " + to_string(lane_find_image.__width_check);
-				////string TexteqL = "Cur van pt: (" + to_string(lane_find_image.__van_pt.x) + ", " + to_string(lane_find_image.__van_pt.y) + "); " + 
-				////	"avg van pt: (" + to_string(lane_find_image.__best_van_pt.x) + ", " + to_string(lane_find_image.__best_van_pt.y) + "); " + "consist: " + to_string(lane_find_image.__van_consist);
-				string TexteqL = "Cur van pt: (" + to_string(van_pt.van_pt_img.x) + ", " + to_string(van_pt.van_pt_img.y) + "); " + 
-					"avg van pt: (" + to_string(van_pt.van_pt_best.x) + ", " + to_string(van_pt.van_pt_best.y) + "); " + "consist: " + to_string(van_pt.consist);
-				
-				string TexteqR = "Left hist diff: " + to_string(left_lane.mean_hist_diff) + ", cur diff: " + to_string(left_lane.current_diff) + "; right hist diff: " + to_string(right_lane.mean_hist_diff) + ", cur diff: " + to_string(right_lane.current_diff);
-				string Textang = "Base_fluctuation: " + to_string(left_lane.base_fluctuation) + ", lane width: " + to_string(lane_find_image.__mean_dist) + "; left w: " + to_string(left_lane.__w_current) + ", right w: " + to_string(right_lane.__w_current);
-				string Textang2 = "Co_diff to l hist: " + to_string(lane_find_image.__left_dist_to_hist) + ", r: " + to_string(lane_find_image.__right_dist_to_hist)+ ", hist: " + to_string(lane_mark.avg_hist_left_fit[2]) + " " + to_string(lane_mark.avg_hist_right_fit[2]) + "; curve dist l: " + to_string(lane_find_image.__left_curve_dist_to_hist) + ", r: " + to_string(lane_find_image.__right_curve_dist_to_hist);
-				#ifdef EVA
-				string Textang3 = "Out rate: " + to_string(out_rate_cur) + ", error rate: " + to_string(error_accu)+ ", fail: " + to_string(fail_count)+ ", tp: " + to_string(tp_count) + ", fp: " + to_string(fp_count) + ", pos: " + to_string(pos_count) + ", neg: " + to_string(neg_count);
-				#endif
-				string Textang4 = "Detected l: " + to_string(left_lane.detected) + ", r: " + to_string(right_lane.detected);
 				putText(result, TextL, Point(10, 40), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
-				putText(result, TextR, Point(10, 70), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				putText(result, TextC, Point(10, 100), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				putText(result, TexteqL, Point(10, 130), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				putText(result, TexteqR, Point(10, 160), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				putText(result, Textang, Point(10, 190), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				putText(result, Textang2, Point(10, 220), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				#ifdef EVA
-				putText(result, Textang3, Point(10, 250), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				#endif
-				
-				if (lane_find_image.__left_nolane)
-					putText(result, "Left no lane", Point(10, 280), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				else if (lane_find_image.__right_nolane)
-					putText(result, "Right no lane", Point(10, 280), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				else
-					putText(result, Textang4, Point(10, 280), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				if (lane_find_image.__last_left_fit == Vec3f(0, 0, 0) || lane_find_image.__last_right_fit == Vec3f(0, 0, 0))
-				{
-					string TextIni = "Initializing frame. ";
-					putText(result, TextIni, Point(10, 310), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA);
-				}
 				
 				#ifndef NDEBUG
 				imshow("result", result);
@@ -501,7 +423,7 @@ int main(int argc, char** argv)
 				cout << "Frame constructed, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
 				t_last = t_now;
 				
-				van_pt.renewWarp();
+				// van_pt.renewWarp();
 				
 				t_now = clock();
 				cout << "Vanishing point renewed, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;

@@ -154,8 +154,9 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 	__avg_hist_right_fit = lane_mark.avg_hist_right_fit;
 	
 	__first_sucs = van_pt.first_sucs;
+	__min_width_warp = van_pt.min_width_pixel_warp;
 	
-	if (van_pt.ini_flag == 0)
+	if (van_pt.ini_flag)
 	{
 	clock_t t_last = clock();
 	__transform_matrix = van_pt.per_mtx;
@@ -669,8 +670,8 @@ void LaneImage::__laneBase(int& hist_width)
 			minMaxIdx(hist_peaks.colRange(midpoint, warp_col), NULL, NULL, NULL, rightx_base_p);
 			__leftx_base = leftx_base_p[1];
 			__rightx_base = rightx_base_p[1] + midpoint;
-			if (__first_sucs) // otherwise hist_width is not updated here
-				hist_width = __rightx_base - __leftx_base;
+			// if (__first_sucs) // otherwise hist_width is not updated here
+			hist_width = __rightx_base - __leftx_base;
 		//}
 		//else // disabled since only peaks are used for finding base, the restriction of hist_width may result in no peaks found
 		//{
@@ -987,7 +988,7 @@ void LaneImage::__laneSanityCheck(int hist_width) // consistent with function ge
         bool lane_width_check = ((abs(dist2right) + abs(dist2left)) < 3.7) && ((abs(dist2right) + abs(dist2left)) > 3.0);
         */
         __bot_width = abs(__left_fit[0]-__right_fit[0]);
-        __width_check = ( __bot_width > 0.8 * hist_width && __bot_width < 1.2*hist_width  && __bot_width > warp_col/8);
+        __width_check = ( __bot_width > 0.8 * hist_width && __bot_width < 1.2*hist_width  && __bot_width > __min_width_warp); // __bot_width > warp_col/8
         cout << "para check" << __parallel_check << "width check" << __width_check << endl;
         // width check disabled temporally
 		return ;// && lane_width_check;

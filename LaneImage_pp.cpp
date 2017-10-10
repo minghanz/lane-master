@@ -87,17 +87,17 @@ void illuComp(Mat& raw_img, Mat& gray, float& illu_comp)
 		cout << "total_pix: " << total_pix << ", accu_num_pix: " << accu_num_pix << endl;
 		cout << accu_graylevel << " " << effective_num_pix << endl;
 		cout << "avg_gray: " << avg_gray<< endl;
-		illu_comp = 80 / avg_gray;
+		illu_comp = 100 / avg_gray;
 	}
 	
 	#ifndef NDEBUG_IN
-	imshow("image before compen", raw_img);
+	// imshow("image before compen", raw_img);
 	#endif
 	gray = gray*illu_comp;
 	raw_img = raw_img*illu_comp;
 	#ifndef NDEBUG_IN
-	imshow("image after compen", raw_img);
-	waitKey(0);
+	// imshow("image after compen", raw_img);
+	// waitKey(0);
 	#endif
 	return;
 }

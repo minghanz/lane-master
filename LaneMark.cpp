@@ -54,8 +54,8 @@ void LaneMark::recordHistFit()
 {
 	if (new_result)
 	{
-		recordHistFit_(hist_fit_left, avg_hist_left_fit, left_fit_best, pos_of_renew_fit_left);
-		recordHistFit_(hist_fit_right, avg_hist_right_fit, right_fit_best, pos_of_renew_fit_right);
+		recordHistFit_(hist_fit_left, avg_hist_left_fit, left_fit_best, pos_of_renew_fit_left, initial_frame);
+		recordHistFit_(hist_fit_right, avg_hist_right_fit, right_fit_best, pos_of_renew_fit_right, initial_frame);
 		if (avg_hist_left_fit != Vec3f(0, 0, 0) && avg_hist_right_fit != Vec3f(0, 0, 0))
 		{
 			hist_width = abs(avg_hist_right_fit[0] - avg_hist_left_fit[0]);
@@ -64,13 +64,20 @@ void LaneMark::recordHistFit()
     
 }
 
-void recordHistFit_(vector<Vec3f>& hist_fit, Vec3f& avg_hist_fit, Vec3f& new_fit, int& pos_of_renew_fit) // have delay of three
+void recordHistFit_(vector<Vec3f>& hist_fit, Vec3f& avg_hist_fit, Vec3f& new_fit, int& pos_of_renew_fit, bool initial_frame) // have delay of three
 {
 	int size_hist = 20;
 	int delay = 3;
 	if (hist_fit.empty() )
 	{
 		hist_fit.push_back(new_fit);
+	}
+	else if (initial_frame)
+	{
+		hist_fit.clear();
+		hist_fit.push_back(new_fit);
+		pos_of_renew_fit = 0;
+		avg_hist_fit = Vec3f(0,0,0);
 	}
 	else if (hist_fit.size() < size_hist + delay)
 	{
@@ -168,5 +175,7 @@ void LaneMark::drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& pl
 	else
 		fillPoly(warp_zero, plot_pts_vec, Scalar(0, 255, 0) );
 		
-	warpPerspective(warp_zero, newwarp, van_pt.inv_per_mtx, img_size );
+	Mat newwarp_lanemark(newwarp.size(), CV_8UC3, Scalar(0,0,0));
+	warpPerspective(warp_zero, newwarp_lanemark, van_pt.inv_per_mtx, img_size );
+	newwarp = newwarp + newwarp_lanemark;
 }

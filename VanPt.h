@@ -33,20 +33,17 @@ class VanPt
 {
 public:
     VanPt(float alpha_w, float alpha_h);
-    int initialVan(Mat color_img, Mat gray);
+    void initialVan(Mat color_img, Mat gray, Mat& warped_img, LaneMark& lane_mark);
     void SteerFilter(Mat image, Mat& steer_resp, Mat& steer_angle_max, Mat& steer_resp_weight);
     void getSteerKernel(Mat& kernel_x, Mat& kernel_y, Mat& kernel_xy, int ksize, double sigma);
     void GaborFilter(Mat image, Mat& gabor_resp_mag, Mat& gabor_resp_dir, Mat& gabor_weight);
-    void GaborVote(Mat gabor_resp_dir, Mat gabor_weight, Mat& gabor_vote);
+    bool GaborVote(Mat gabor_resp_dir, Mat gabor_weight, Mat& gabor_vote, Mat edges);
     void NMS(Mat matrix, Mat& matrix_nms);
     void LaneDirec(Mat steer_resp_mag, Mat edges, Mat& blur_edges);
     void RoughLaneDirec(Mat steer_resp_mag, Mat& mask_side, int direction);
 
     void DecideChnlThresh(Mat color_img, Mat image, Mat blur_edges); // use normalized one or ?
-    void imageVan(Mat image);
-    void recordBestVan(Line& left_lane, Line& right_lane);
-    void recordHistVan(LaneImage& lane_find_image, Line& left_lane, Line& right_lane);
-    void checkClearSeriesVan();
+
     void drawOn(Mat& newwarp, LaneMark& lane_mark);
     void renewWarp();
 public:
@@ -56,6 +53,7 @@ public:
     Point2f van_pt_avg;
     Point van_pt_best_int;
     Point2f van_pt_cali;
+
     #ifdef CALI_VAN
     float coef_pix_per_cm;
     float van_pt_cali_y;	
@@ -63,31 +61,52 @@ public:
     int min_width_pixel_warp;
     #endif
 
+    vector<Vec4i> lines_vote;
+
     vector<Point2f> warp_src;
     vector<Point2f> warp_dst;
-    vector<vector<Point> > warp_test_vec; // used in drawContour
+    vector<vector<Point>> warp_test_vec; // used in drawContour
     int y_bottom_warp;
+    int y_bottom_warp_max;
 
-	Mat per_mtx;
+    Mat per_mtx;
     Mat inv_per_mtx;
+
+    Mat vote_lines_img;
+
+    Mat valid_lines_map;
+    bool ini_flag;
+    bool first_sucs;
+    bool sucs_before;
+    int fail_ini_count;
+
+    bool ini_success;   // used in GaborVote: deciding whether the vote has valid result
+
+    #ifdef CANNY_VOTE
+    Point2f van_pt_obsv;
+    float max_weight_left;
+    float max_weight_right;
+    float confidence;
+    // KalmanFilter kalman;
+    float conf_c_x, conf_gamma_x, conf_c_y, conf_gamma_y;
+    float conf_c_x_max, conf_c_x_min;
+    float conf_c_y_min;
+    float conf_gamma_e, conf_c_e;
+
+    bool edgeVote(Mat image, Mat edges);
+    int checkValidLine(Vec4i line);
+    float getLineWeight(Vec4i line);
+    float getConfidence(const vector<Point2f>& van_pt_candi, const vector<float>& van_pt_candi_w, 
+        const vector<float>& valid_lines_w_left, const vector<float>& valid_lines_w_right); //, Point2f van_pt_obsv);
+    void updateTrackVar();
+    #endif
+
     float theta_w;	// yaw angle
     float theta_h;	// pitch angle
     const float ALPHA_W;
     const float ALPHA_H;
-    bool first_sucs;                    // renewed by initialVan, fed to LaneImage, set hist_width if true
-    bool sucs_before;           // renewed by initialVan, true if initialVan has ever succeeded, used to decide first_sucs only
-    bool ini_flag; 
 
-    bool consist;
-
-    bool ini_success;   // used in GaborVote: deciding whether the vote has valid result
     vector<int> chnl_thresh;
-
-private:
-    vector<Point> series_van_pt;                    // renewed by renewSeriesVan, used by initialVan, cleared by fail_ini_count
-	int pos_of_renew_van; // used in renewSeriesVan
-    int fail_ini_count;
-    const float VAN_TRACK_Y; // used in initialVan and renewSeriesVan
 	
 };
 

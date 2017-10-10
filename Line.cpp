@@ -29,7 +29,7 @@ Line::Line(float w_history, bool sanity_check, bool sanity_parallel_check)
 
 void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 {
-	bool van_consist = van_pt.consist;
+	bool van_consist = true; // van_pt.consist;
 	int window_half_width = lane_mark.window_half_width;
 	float w_current = 1 - w_history;
 	base_fluctuation = 1.3 * window_half_width;
@@ -51,7 +51,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		}
 		current_diff = getDiff();
 		cout << "Current diff: " << current_diff << ", mean diff: " << mean_hist_diff << ", base_fluctuation: " << base_fluctuation << endl;
-			
+		cout << "paralled_check: " << parallel_check << ", check: " << check << endl;
 		if ( (current_fit.size() == 1 || detected == false || (mean_hist_diff >= 0.3*base_fluctuation && current_diff < 1.5*base_fluctuation && parallel_check == true))  && van_consist  == true) // the history is bad, not requiring width check, loosing the fluctuation
 		{
 			if (current_diff < 0.5*base_fluctuation || current_fit.size() == 1 || detected == false)
@@ -170,7 +170,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 			w_current = 0;
 			fail_detect_count ++;
 			if (fail_detect_count >= 5) detected = false;
-			cout << "case 5" ;
+			cout << "case 5" << endl;
 		}
 		__w_current = w_current;
 	}

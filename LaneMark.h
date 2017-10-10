@@ -60,5 +60,5 @@ public:
 	void drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& plot_pts_r, VanPt& van_pt);
 };
 
-void recordHistFit_(vector<Vec3f>& hist_fit, Vec3f& avg_hist_fit, Vec3f& new_fit, int& pos_of_renew_fit); // have delay of three
+void recordHistFit_(vector<Vec3f>& hist_fit, Vec3f& avg_hist_fit, Vec3f& new_fit, int& pos_of_renew_fit, bool initial_frame); // have delay of three
 float getLaneWidthWarp(Vec3f left_fit, Vec3f right_fit);

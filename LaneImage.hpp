@@ -124,6 +124,7 @@ class LaneImage
 	float __left_curve_dist_to_hist, __right_curve_dist_to_hist;
 	
 	bool __first_sucs; // for finding lane base
+	int __min_width_warp;
 	
 	float __mean_dist; // the renewing of window_width is based on refined lane
 	
