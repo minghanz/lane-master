@@ -14,8 +14,8 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	#endif
 
 	#ifdef CALI_VAN
-	float coef_pix_per_cm = 0.0074;
-	float van_pt_cali_y = 181;		//161.1941 // y = 0.0074(x-161.1941)
+	coef_pix_per_cm = 0.0074;
+	van_pt_cali_y = 181;		//161.1941 // y = 0.0074(x-161.1941)
 	float van_pt_cali_x = 340;
 
 	van_pt_cali = Point2f(van_pt_cali_x, van_pt_cali_y);
@@ -30,7 +30,9 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 
 	float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
 	warp_pix_per_cm = warp_col / real_width_bottom;
-	min_width_pixel_warp = warp_pix_per_cm * 200; // assume lane width should be no less than 200cm
+	min_width_pixel_warp = warp_pix_per_cm * 180; // assume lane width should be no less than 200cm
+
+	cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
 
 	#else
 	van_pt_ini = Point2f(img_size.width/2, img_size.height/2);
@@ -154,27 +156,10 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 
 	#else
 	ini_success = edgeVote(image, edges);
-	if (ini_success && conf_c_y <= 3*conf_c_y_min && confidence >= 0.001)
+	updateFlags();
+	if (first_sucs)
 	{
-		if (!sucs_before){
-			first_sucs = true;}
-		else{
-			first_sucs = false;}
-		sucs_before = true;
-
-		fail_ini_count = max(0, fail_ini_count - 1);
-		if (fail_ini_count == 0)
-			ini_flag = true;
-	}
-	else
-	{
-		first_sucs = false;
-
-		fail_ini_count = min(15, fail_ini_count + 1);
-		if (fail_ini_count >= 5)
-		{
-			ini_flag = false;
-		}
+		van_pt_ini = van_pt_obsv;
 	}
 	updateTrackVar();
 
@@ -220,7 +205,8 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 	#ifdef CALI_VAN
 	float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
 	warp_pix_per_cm = warp_col / real_width_bottom;
-	min_width_pixel_warp = warp_pix_per_cm * 200; // assume lane width should be no less than 200cm
+	min_width_pixel_warp = warp_pix_per_cm * 180; // assume lane width should be no less than 200cm
+	cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
 	#endif
 
 }
@@ -516,13 +502,38 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 
 }
 
+void VanPt::updateFlags()
+{
+	if (ini_success && confidence >= 0.01) //  && conf_c_y <= 3*conf_c_y_min
+	{
+		if (!sucs_before){
+			first_sucs = true;}
+		else{
+			first_sucs = false;}
+		sucs_before = true;
+
+		fail_ini_count = max(0, fail_ini_count - 1);
+		if (fail_ini_count == 0)
+			ini_flag = true;
+	}
+	else
+	{
+		first_sucs = false;
+
+		fail_ini_count = min(10, fail_ini_count + 1);
+		if (fail_ini_count >= 5)
+		{
+			ini_flag = false;
+		}
+	}
+}
 void VanPt::updateTrackVar()
 {
 	if (!ini_success || confidence < 0.01)
 	{
 		conf_c_x = min(conf_c_x_max, float(1.1*conf_c_x));
 	}
-	else
+	else if (confidence >= 0.03)
 	{
 		conf_c_x = max(conf_c_x_min, float(0.9*conf_c_x));
 		conf_c_y = max(conf_c_y_min, float(0.9*conf_c_y));

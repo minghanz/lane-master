@@ -52,7 +52,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		current_diff = getDiff();
 		cout << "Current diff: " << current_diff << ", mean diff: " << mean_hist_diff << ", base_fluctuation: " << base_fluctuation << endl;
 		cout << "paralled_check: " << parallel_check << ", check: " << check << endl;
-		if ( (current_fit.size() == 1 || detected == false || (mean_hist_diff >= 0.3*base_fluctuation && current_diff < 1.5*base_fluctuation && parallel_check == true))  && van_consist  == true) // the history is bad, not requiring width check, loosing the fluctuation
+		if ( (current_fit.size() == 1 || detected == false || (mean_hist_diff >= 0.3*base_fluctuation && current_diff < 1.5*base_fluctuation))  && check == true && van_consist  == true) // the history is bad, not requiring width check, loosing the fluctuation
 		{
 			if (current_diff < 0.5*base_fluctuation || current_fit.size() == 1 || detected == false)
 				w_current = 1;

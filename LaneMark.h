@@ -51,6 +51,7 @@ public:
 
 	bool new_result;
 	bool initial_frame;
+	bool last_all_white;
 
 public:
 	LaneMark();

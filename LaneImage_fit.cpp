@@ -4,7 +4,7 @@
 using namespace std;
 using namespace cv;
 
-void LaneImage::__fitLaneMovingWindow(int& hist_width)
+void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 {
 	///based on the warped binary output
 	
@@ -23,6 +23,20 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width)
 	findNonZero(warped_filter_image_U, nonz_loc);
 	
 	cout << "# of non-zero pixels: " << nonz_loc.size() << endl;
+	
+	if (nonz_loc.size() >= 0.75*warp_col*warp_row  )
+	{
+		if (last_all_white)
+		{
+			cout << "This frame failed: too many non-zero pixel found" << endl;
+			return;
+		}
+		last_all_white = true;
+	}
+	else
+	{
+		last_all_white = false;
+	}
 	if (nonz_loc.size() <= __window_min_pixel) /// safe return
 	{
 		cout << "This frame failed: no non-zero pixel found" << endl;
@@ -120,7 +134,7 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width)
 		float length_left = real_length_left, length_right = real_length_right;
 		
 		/// avoid one side dominates
-		float min_strong_pixel = 600;
+		float min_strong_pixel = 500;
 		float less_side_num;
 		bool left_less = false, need_samp = false;
 		if (1.2 * real_length_left < real_length_right)
@@ -331,57 +345,60 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width)
 			
 			res_lane = 5/res_lane;
 			
-			if (__avg_hist_left_fit != Vec3f(0, 0, 0) && __avg_hist_right_fit != Vec3f(0, 0, 0))
-			{
-				if (iteration_subsample == 0 || normal)
-				{
-					Vec3f left_fit_vec = left_fit;
-					Vec3f right_fit_vec = right_fit;
-					__left_dist_to_hist = __getDiff(left_fit_vec, __avg_hist_left_fit);
-					__right_dist_to_hist = __getDiff(right_fit_vec, __avg_hist_right_fit);
-					__left_curve_dist_to_hist = __getCurveDiff(left_fit_vec, __avg_hist_left_fit);
-					__right_curve_dist_to_hist = __getCurveDiff(right_fit_vec, __avg_hist_right_fit);
-				}
-			}
-			if (__left_curve_dist_to_hist > 0.0003 && __right_curve_dist_to_hist < 0.00015)
-			{
-				normal = false;
-				for (int ind_lane = 0; ind_lane < length_left; ind_lane++)
-				{
-					if (line_Y1[ind_lane] > warp_row/2) // upper part
-						line_W[ind_lane] = 0;
-				}
-			}
-			else if (__left_curve_dist_to_hist < 0.00015 && __right_curve_dist_to_hist > 0.0003)
-			{
-				normal = false;
-				for (int ind_lane = length_left; ind_lane < length_left + length_right; ind_lane++)
-				{
-					if (line_Y1[ind_lane] > warp_row/2) // upper part
-						line_W[ind_lane] = 0;
-				}
-			}
-			else
-			{
-				if (__left_dist_to_hist < 0 && __right_dist_to_hist > 0)// left is bifurcating (__left_dist_to_hist >  __right_dist_to_hist)
-				{
-					normal = false;
-					for (int ind_lane = 0; ind_lane < length_left; ind_lane++)
-					{
-						if (line_Y1[ind_lane] > warp_row/2) // upper part
-							line_W[ind_lane] = 0;
-					}
-				}
-				else if (__left_dist_to_hist > 0 && __right_dist_to_hist < 0)// right is bifurcating(__right_dist_to_hist >  __left_dist_to_hist)
-				{
-					normal = false;
-					for (int ind_lane = length_left; ind_lane < length_left + length_right; ind_lane++)
-					{
-						if (line_Y1[ind_lane] > warp_row/2) // upper part
-							line_W[ind_lane] = 0;
-					}
-				}
-			}
+			// /// judging bifurcation
+			// if (__avg_hist_left_fit != Vec3f(0, 0, 0) && __avg_hist_right_fit != Vec3f(0, 0, 0))
+			// {
+			// 	if (iteration_subsample == 0 || normal)
+			// 	{
+			// 		Vec3f left_fit_vec = left_fit;
+			// 		Vec3f right_fit_vec = right_fit;
+			// 		__left_dist_to_hist = __getDiff(left_fit_vec, __avg_hist_left_fit);
+			// 		__right_dist_to_hist = __getDiff(right_fit_vec, __avg_hist_right_fit);
+			// 		__left_curve_dist_to_hist = __getCurveDiff(left_fit_vec, __avg_hist_left_fit);
+			// 		__right_curve_dist_to_hist = __getCurveDiff(right_fit_vec, __avg_hist_right_fit);
+			// 	}
+			// }
+			// if (__left_curve_dist_to_hist > 0.0003 && __right_curve_dist_to_hist < 0.00015)
+			// {
+			// 	normal = false;
+			// 	for (int ind_lane = 0; ind_lane < length_left; ind_lane++)
+			// 	{
+			// 		if (line_Y1[ind_lane] > warp_row/2) // upper part
+			// 			line_W[ind_lane] = 0;
+			// 	}
+			// }
+			// else if (__left_curve_dist_to_hist < 0.00015 && __right_curve_dist_to_hist > 0.0003)
+			// {
+			// 	normal = false;
+			// 	for (int ind_lane = length_left; ind_lane < length_left + length_right; ind_lane++)
+			// 	{
+			// 		if (line_Y1[ind_lane] > warp_row/2) // upper part
+			// 			line_W[ind_lane] = 0;
+			// 	}
+			// }
+			// else
+			// {
+			// 	if (__left_dist_to_hist < 0 && __right_dist_to_hist > 0)// left is bifurcating (__left_dist_to_hist >  __right_dist_to_hist)
+			// 	{
+			// 		normal = false;
+			// 		for (int ind_lane = 0; ind_lane < length_left; ind_lane++)
+			// 		{
+			// 			if (line_Y1[ind_lane] > warp_row/2) // upper part
+			// 				line_W[ind_lane] = 0;
+			// 		}
+			// 	}
+			// 	else if (__left_dist_to_hist > 0 && __right_dist_to_hist < 0)// right is bifurcating(__right_dist_to_hist >  __left_dist_to_hist)
+			// 	{
+			// 		normal = false;
+			// 		for (int ind_lane = length_left; ind_lane < length_left + length_right; ind_lane++)
+			// 		{
+			// 			if (line_Y1[ind_lane] > warp_row/2) // upper part
+			// 				line_W[ind_lane] = 0;
+			// 		}
+			// 	}
+			// }
+			// /////////////////////////////////////////////////////////////
+
 			Mat w_lane(res_lane.rows, 4, CV_32F);
 			w_lane.col(0) = (5/res_lane.col(0)).mul(W_lane.t());
 			w_lane.col(1) = w_lane.col(0) + 0;

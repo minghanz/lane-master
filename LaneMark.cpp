@@ -20,6 +20,7 @@ LaneMark::LaneMark()
 
 	new_result = false;
 	initial_frame = true;
+	last_all_white = false;
 }
 
 void LaneMark::recordImgFit(LaneImage& lane_find_image)

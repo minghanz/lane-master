@@ -58,7 +58,7 @@ public:
     float coef_pix_per_cm;
     float van_pt_cali_y;	
     float warp_pix_per_cm;
-    int min_width_pixel_warp;
+    float min_width_pixel_warp;
     #endif
 
     vector<Vec4i> lines_vote;
@@ -98,6 +98,7 @@ public:
     float getLineWeight(Vec4i line);
     float getConfidence(const vector<Point2f>& van_pt_candi, const vector<float>& van_pt_candi_w, 
         const vector<float>& valid_lines_w_left, const vector<float>& valid_lines_w_right); //, Point2f van_pt_obsv);
+    void updateFlags();
     void updateTrackVar();
     #endif
 

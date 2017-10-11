@@ -175,7 +175,7 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 	t_last = t_now;
 	
 	__lane_window_out_img = Mat(warp_row, warp_col, CV_8UC3, Scalar(0, 0, 0));
-	__fitLaneMovingWindow(lane_mark.hist_width);
+	__fitLaneMovingWindow(lane_mark.hist_width, lane_mark.last_all_white);
 	
 	t_now = clock();
 	cout << "Image fitted, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
@@ -612,7 +612,7 @@ void LaneImage::__laneBase(int& hist_width)
 		minMaxIdx(histogram.colRange(midpoint, warp_col), NULL, &max_histogram_r, NULL, NULL);
 		
 		/// finding peaks and prefer peaks that do not have other peaks in between
-		int min_peak_dist = warp_col / 40;
+		int min_peak_dist = warp_col / 20;
 		float min_height_diff_l = max_histogram_l/3, min_height_diff_r = max_histogram_r/3; // 5
 		float min_height_l = min_height_diff_l, min_height_r = min_height_diff_r;
 		vector<int> max_loc_l, max_loc_r;
@@ -989,7 +989,8 @@ void LaneImage::__laneSanityCheck(int hist_width) // consistent with function ge
         */
         __bot_width = abs(__left_fit[0]-__right_fit[0]);
         __width_check = ( __bot_width > 0.8 * hist_width && __bot_width < 1.2*hist_width  && __bot_width > __min_width_warp); // __bot_width > warp_col/8
-        cout << "para check" << __parallel_check << "width check" << __width_check << endl;
+		cout << "para check" << __parallel_check << "width check" << __width_check << endl;
+		cout << "__bot_width: " << __bot_width << ", __min_width_warp: " << __min_width_warp << ", hist_width: " << hist_width << endl;
         // width check disabled temporally
 		return ;// && lane_width_check;
 

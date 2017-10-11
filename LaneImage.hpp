@@ -54,7 +54,7 @@ class LaneImage
 	void __imageFilter();
 	void __warp();
 	void trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds);
-	void __fitLaneMovingWindow(int& hist_width);
+	void __fitLaneMovingWindow(int& hist_width, bool& last_all_white);
 	void __makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty);
 	float __getDiff(Vec3f& cur_fit, Vec3f& hist_fit);
 	float __getCurveDiff(Vec3f& cur_fit, Vec3f& hist_fit); // consistent with function getLaneWidthWarp
