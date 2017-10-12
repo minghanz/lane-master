@@ -154,7 +154,11 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 	__avg_hist_right_fit = lane_mark.avg_hist_right_fit;
 	
 	__first_sucs = van_pt.first_sucs;
+	#ifdef CALI_VAN
 	__min_width_warp = van_pt.min_width_pixel_warp;
+	#else
+	__min_width_warp = warp_col/6;
+	#endif
 	
 	if (van_pt.ini_flag)
 	{
@@ -619,6 +623,55 @@ void LaneImage::__laneBase(int& hist_width)
 		vector<float> max_val_l, max_val_r;
 		extractPeaks(histogram.colRange(0, midpoint), min_peak_dist, min_height_diff_l, min_height_l, max_loc_l, max_val_l);
 		extractPeaks(histogram.colRange(midpoint, warp_col), min_peak_dist, min_height_diff_r, min_height_r, max_loc_r, max_val_r);
+
+
+		// Mat hist_peaks(1, max_val_l.size() + max_val_r.size(), CV_32FC1, Scalar(0));
+		// for (int i = 0; i < max_loc_l.size(); i++)
+		// {
+		// 		//float sub_max = 0;
+		// 		float cur_peak = max_val_l[i];
+		// 		for (int j = i; j < max_loc_l.size(); j++)
+		// 		{
+		// 			if (j > i) // && max_loc[j] < warp_col/2 && max_val[j] > sub_max)
+		// 			{
+		// 				//sub_max = max_val[j];
+		// 				cur_peak = cur_peak - 2*max_val_l[j];
+		// 			}
+		// 		}
+		// 		hist_peaks.at<float>( i ) = cur_peak; // max_val[i] - sub_max;
+		// }
+		// for (int i = 0; i < max_loc_r.size(); i++)
+		// {
+		// 		//float sub_max = 0;
+		// 		float cur_peak = max_val_r[i];
+		// 		for (int j = i; j >= 0; j--)
+		// 		{
+		// 			if (j < i  ) // && max_loc[j] > warp_col/2 && max_val[j] > sub_max)
+		// 			{
+		// 				//sub_max = max_val[j];
+		// 				cur_peak = cur_peak - 2*max_val_r[j];
+		// 			}
+		// 		}
+		// 		hist_peaks.at<float>( i + max_loc_l.size() ) = cur_peak; // max_val[i] - sub_max;
+		// }
+		// Mat hist_peaks_pair(1, max_val_l.size() * max_val_r.size(), CV_32FC1, Scalar(0));
+		// for (int i = 0; i < max_loc_l.size(); i++)
+		// {
+		// 	for (int j = 0; j < max_loc_r.size(); j++)
+		// 	{
+		// 		hist_peaks_pair.at<float>(i * max_loc_r.size() + j) = (hist_peaks.at<float>(i) + hist_peaks.at<float>(j + max_loc_l.size())) * (midpoint + max_loc_r[j] - max_loc_l[i] >= __min_width_warp);
+		// 	}
+		// }
+		// int base_pair[2];
+		// minMaxIdx(hist_peaks_pair, NULL, NULL, NULL, base_pair); //histogram.colRange(0, midpoint)
+		// int peak_pair = base_pair[1];
+		// int peak_r_idx = peak_pair % max_loc_r.size();
+		// int peak_l_idx = peak_pair / max_loc_r.size();
+		
+		// __leftx_base = max_loc_l[peak_l_idx];
+		// __rightx_base = max_loc_r[peak_r_idx] + midpoint;
+		// hist_width = __rightx_base - __leftx_base;
+		
 		Mat hist_peaks(1, warp_col, CV_32FC1, Scalar(0));
 		for (int i = 0; i < max_loc_l.size(); i++)
 		{
@@ -672,7 +725,7 @@ void LaneImage::__laneBase(int& hist_width)
 			__rightx_base = rightx_base_p[1] + midpoint;
 			// if (__first_sucs) // otherwise hist_width is not updated here
 			hist_width = __rightx_base - __leftx_base;
-		//}
+		// }
 		//else // disabled since only peaks are used for finding base, the restriction of hist_width may result in no peaks found
 		//{
 			//float cur_max = 0;

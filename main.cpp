@@ -376,12 +376,12 @@ int main(int argc, char** argv)
 			{
 				string TextL = "Frame " + to_string((int)time_step);
 				putText(result, TextL, Point(10, 40), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
-				putText(result, "Current frame failed.", Point(10, 70), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+				putText(result, "Current frame failed.", Point(10, 60), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 				//// if (lane_find_image.__last_left_fit == Vec3f(0, 0, 0) || lane_find_image.__last_right_fit == Vec3f(0, 0, 0))
 				if (lane_mark.initial_frame)
 				{
 					string TextIni = "Initializing frame. ";
-					putText(result, TextIni, Point(10, 100), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+					putText(result, TextIni, Point(10, 80), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 				}
 				#ifndef NDEBUG
 				imshow("result", result);
@@ -404,8 +404,15 @@ int main(int argc, char** argv)
 				cout << "lateral offset right: " << right_lane.best_line_base_pos << endl;
 				#endif
 				
-				string TextL = "Frame " + to_string((int)time_step);
-				putText(result, TextL, Point(10, 40), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
+				string Text1 = "Frame " + to_string((int)time_step);
+				string Text2 = "Hist width: " + x2str(lane_mark.hist_width) + ", min width: " + x2str(lane_find_image.__min_width_warp) + ", width: " + x2str(lane_find_image.__bot_width);
+				string Text3 = "L: cur diff: " + x2str(left_lane.current_diff) + ", mean diff: " + x2str(left_lane.mean_hist_diff) +  ", base_fluc: " + x2str(left_lane.base_fluctuation) + ", w: " + x2str(left_lane.__w_current);
+				string Text4 = "R: cur diff: " + x2str(right_lane.current_diff) + ", mean diff: " + x2str(right_lane.mean_hist_diff) +  ", base_fluc: " + x2str(right_lane.base_fluctuation) + ", w: " + x2str(right_lane.__w_current);
+				putText(result, Text1, Point(10, 40), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
+				putText(result, Text2, Point(10, 60), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
+				putText(result, Text3, Point(10, 80), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
+				putText(result, Text4, Point(10, 100), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
+				
 				
 				#ifndef NDEBUG
 				imshow("result", result);

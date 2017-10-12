@@ -72,20 +72,38 @@ void recordHistFit_(vector<Vec3f>& hist_fit, Vec3f& avg_hist_fit, Vec3f& new_fit
 	if (hist_fit.empty() )
 	{
 		hist_fit.push_back(new_fit);
+		avg_hist_fit = new_fit;
 	}
 	else if (initial_frame)
 	{
 		hist_fit.clear();
 		hist_fit.push_back(new_fit);
 		pos_of_renew_fit = 0;
-		avg_hist_fit = Vec3f(0,0,0);
+		avg_hist_fit = new_fit;
 	}
 	else if (hist_fit.size() < size_hist + delay)
 	{
 		if (hist_fit.back() != new_fit)
 		{
 			hist_fit.push_back(new_fit);
-			if (hist_fit.size() == size_hist + delay)
+			// if (hist_fit.size() == size_hist + delay)
+			// {
+			// 	for (int i = 0; i < size_hist; i++)
+			// 	{
+			// 		avg_hist_fit += hist_fit[i];
+			// 	}
+			// 	avg_hist_fit = avg_hist_fit*(1.0/(float)size_hist);
+			// }
+			avg_hist_fit = Vec3f(0,0,0);
+			if (hist_fit.size() <= size_hist)
+			{
+				for (int i = 0; i < hist_fit.size() ; i++)
+				{
+					avg_hist_fit += hist_fit[i];
+				}
+				avg_hist_fit = avg_hist_fit*(1.0/(float)hist_fit.size() );
+			}
+			else
 			{
 				for (int i = 0; i < size_hist; i++)
 				{

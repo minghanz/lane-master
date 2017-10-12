@@ -20,6 +20,8 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 
 	van_pt_cali = Point2f(van_pt_cali_x, van_pt_cali_y);
 	van_pt_ini = van_pt_cali;
+	theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
+	theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
 
 	float theta_h_cali = atan(tan(alpha_h)*(1- 2*van_pt_cali_y/img_size.height));
 
@@ -37,6 +39,8 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	#else
 	van_pt_ini = Point2f(img_size.width/2, img_size.height/2);
 	van_pt_cali = van_pt_ini;
+	theta_w = 0; 	// yaw angle 
+	theta_h = 0;	// pitch angle
 	#endif
 
 
@@ -76,6 +80,9 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	max_weight_left = 0;
 	max_weight_right = 0;
 	confidence = 0;
+	conf_weight = 0;
+	conf_mse = 0;
+	conf_dist = 0;
 	// kalman.init(2, 2, 0, CV_32F);
 	conf_gamma_x = 1.0 / (20.0 / (480.0 * 0.7) * y_bottom_warp_max);
 	conf_c_x_max = 100.0 / (480.0 * 0.7) * y_bottom_warp_max;
@@ -128,12 +135,9 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 	bitwise_and(edges, cali_mask, edges); // remove the edges caused by warp effect
 
 	int dist_top_thre = (y_bottom_warp_max - van_pt_cali.y)*1/6; 			// may need modification: depends on cali or detect result ?
-	#ifndef HIGH_BOT
+
 	edges.rowRange(0, van_pt_cali.y + dist_top_thre) = 0;
-	#else
-	edges.rowRange(0, van_pt_cali.y + dist_top_thre) = 0;
-	edges.rowRange(image.rows*7/10, image.rows) = 0;  // for caltech data
-	#endif
+	edges.rowRange(y_bottom_warp_max, image.rows) = 0;  // for caltech data
 
 	#ifndef CANNY_VOTE
 	// Mat steer_resp_mag(image.size(), CV_32FC1, Scalar(0));
@@ -314,6 +318,14 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 	// track with Kalman
 	van_pt_ini = confidence*van_pt_obsv + (1-confidence)*van_pt_ini;
 
+	theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
+	theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
+	int fontFace = FONT_HERSHEY_SIMPLEX;
+	double fontScale = 0.5;
+	int thickness = 1;
+	// string Text1 = "pitch: " + x2str(theta_h*180/CV_PI) + ", yaw: " + x2str(theta_w*180/CV_PI);
+	// putText(vote_lines_img, Text1, Point(10, 140), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+
 	return true;
 
 }
@@ -410,7 +422,6 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 {
 	Point2f ref_pt = van_pt_ini; //van_pt_cali
 
-	float conf_weight, conf_mse, conf_dist;
 
 	// conf_weight
 	float weight_left = 0, weight_right = 0;
@@ -431,19 +442,19 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	}
 	else if (weight_left > max_weight_left)
 	{
-		conf_weight = sqrt(weight_right / max_weight_right);
+		conf_weight = pow(weight_right / max_weight_right, 0.7);
 		max_weight_left = weight_left;
 		max_weight_right *= 0.99;
 	}
 	else if (weight_right > max_weight_right)
 	{
-		conf_weight = sqrt(weight_left / max_weight_left);
+		conf_weight = pow(weight_left / max_weight_left, 0.7);
 		max_weight_right = weight_right;
 		max_weight_left *= 0.99;
 	}
 	else
 	{
-		conf_weight = sqrt(min(weight_left / max_weight_left, weight_right / max_weight_right) );
+		conf_weight = pow(min(weight_left / max_weight_left, weight_right / max_weight_right), 0.7 );
 		max_weight_left *= 0.99;
 		max_weight_right *= 0.99;
 	}
@@ -488,14 +499,14 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	int fontFace = FONT_HERSHEY_SIMPLEX;
 	double fontScale = 0.5;
 	int thickness = 1;
-	string Text1 = "conf_w: " + x2str(conf_weight) + ", conf_mse: " + x2str(conf_mse) + ", conf_dist: " + x2str(conf_dist);
-	string Text2 = "conf_cur: " + x2str(cur_confidence) + ", conf: " + x2str(filter_confidence);
-	string Text3 = "w: (" + x2str(weight_left) + ", " + x2str(weight_right) + "), w_max: (" + x2str(max_weight_left) + ", " + x2str(max_weight_right) + ")";
-	string Text4 = "van_pt_obsv: (" + x2str((int)van_pt_obsv.x) + ", " + x2str((int)van_pt_obsv.y) + ")";
-	putText(vote_lines_img, Text1, Point(10, 80), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
-	putText(vote_lines_img, Text2, Point(10, 100), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
-	putText(vote_lines_img, Text3, Point(10, 120), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
-	putText(vote_lines_img, Text4, Point(270, 60), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	// string Text1 = "conf_w: " + x2str(conf_weight) + ", conf_mse: " + x2str(conf_mse) + ", conf_dist: " + x2str(conf_dist);
+	// string Text2 = "conf_cur: " + x2str(cur_confidence) + ", conf: " + x2str(filter_confidence);
+	// string Text3 = "w: (" + x2str(weight_left) + ", " + x2str(weight_right) + "), w_max: (" + x2str(max_weight_left) + ", " + x2str(max_weight_right) + ")";
+	// string Text4 = "van_pt_obsv: (" + x2str((int)van_pt_obsv.x) + ", " + x2str((int)van_pt_obsv.y) + ")";
+	// putText(vote_lines_img, Text1, Point(10, 80), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	// putText(vote_lines_img, Text2, Point(10, 100), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	// putText(vote_lines_img, Text3, Point(10, 120), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	// putText(vote_lines_img, Text4, Point(270, 60), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 
 
 	return filter_confidence;
@@ -504,7 +515,7 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 
 void VanPt::updateFlags()
 {
-	if (ini_success && confidence >= 0.01) //  && conf_c_y <= 3*conf_c_y_min
+	if (ini_success && ( (confidence >= 0.01) || (!sucs_before && conf_mse >= 0.5) ) ) //  && conf_c_y <= 3*conf_c_y_min
 	{
 		if (!sucs_before){
 			first_sucs = true;}

@@ -54,13 +54,14 @@ public:
     Point van_pt_best_int;
     Point2f van_pt_cali;
 
+    /// not in individual VanPt
     #ifdef CALI_VAN
     float coef_pix_per_cm;
     float van_pt_cali_y;	
     float warp_pix_per_cm;
     float min_width_pixel_warp;
     #endif
-
+    ///////////////////////////////
     vector<Vec4i> lines_vote;
 
     vector<Point2f> warp_src;
@@ -74,7 +75,10 @@ public:
 
     Mat vote_lines_img;
 
+    /// not in individual VanPt
     Mat valid_lines_map;
+    /////////////////////////////
+
     bool ini_flag;
     bool first_sucs;
     bool sucs_before;
@@ -87,6 +91,7 @@ public:
     float max_weight_left;
     float max_weight_right;
     float confidence;
+    float conf_weight, conf_mse, conf_dist;
     // KalmanFilter kalman;
     float conf_c_x, conf_gamma_x, conf_c_y, conf_gamma_y;
     float conf_c_x_max, conf_c_x_min;
@@ -106,8 +111,10 @@ public:
     float theta_h;	// pitch angle
     const float ALPHA_W;
     const float ALPHA_H;
+    /// not in individual VanPt
 
     vector<int> chnl_thresh;
+    ////////////////////////////
 	
 };
 
