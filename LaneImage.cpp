@@ -625,7 +625,7 @@ void LaneImage::__laneBase(int& hist_width)
 		extractPeaks(histogram.colRange(midpoint, warp_col), min_peak_dist, min_height_diff_r, min_height_r, max_loc_r, max_val_r);
 
 
-		// Mat hist_peaks(1, max_val_l.size() + max_val_r.size(), CV_32FC1, Scalar(0));
+		// Mat hist_peaks(1, max_val_l.size() + max_val_r.size(), CV_32FC1, Scalar(0)); // embed width constraints into finding peaks
 		// for (int i = 0; i < max_loc_l.size(); i++)
 		// {
 		// 		//float sub_max = 0;

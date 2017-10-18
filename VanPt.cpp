@@ -442,19 +442,19 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	}
 	else if (weight_left > max_weight_left)
 	{
-		conf_weight = pow(weight_right / max_weight_right, 0.7);
+		conf_weight = sqrt(weight_right / max_weight_right); //pow(weight_right / max_weight_right, 0.7)
 		max_weight_left = weight_left;
 		max_weight_right *= 0.99;
 	}
 	else if (weight_right > max_weight_right)
 	{
-		conf_weight = pow(weight_left / max_weight_left, 0.7);
+		conf_weight = sqrt(weight_left / max_weight_left);
 		max_weight_right = weight_right;
 		max_weight_left *= 0.99;
 	}
 	else
 	{
-		conf_weight = pow(min(weight_left / max_weight_left, weight_right / max_weight_right), 0.7 );
+		conf_weight = sqrt(min(weight_left / max_weight_left, weight_right / max_weight_right));
 		max_weight_left *= 0.99;
 		max_weight_right *= 0.99;
 	}
