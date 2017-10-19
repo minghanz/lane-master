@@ -44,7 +44,7 @@ class LaneImage
 	//// LaneImage (Mat& per_mtx, Mat& inv_per_mtx, Mat& image, float nframe, int samp_cyc, int ini_flag, int& hist_width, bool first_sucs, int window_half_width, Mat& BGR_sample, Mat& HLS_sample, Mat& BGR_resp, Mat& HLS_resp,
 	//// 	Vec3f left_fit = Vec3f(0, 0, 0), Vec3f right_fit = Vec3f(0, 0, 0), Vec3f avg_hist_left_fit = Vec3f(0, 0, 0), Vec3f avg_hist_right_fit = Vec3f(0, 0, 0), vector<int> chnl_thresh = vector<int>(6, 0), Ptr<ml::LogisticRegression> BGR_regg = Ptr<ml::LogisticRegression>(),Ptr<ml::LogisticRegression> HLS_regg = Ptr<ml::LogisticRegression>(), Mat dist_coeff = Mat(), Mat cam_mtx = Mat() );
 	//// #endif
-	LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, Mat cam_mtx, Mat dist_coeff, float nframe);
+	LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, float nframe);
 
 	void __calibration();
 	void __laneBase(int& hist_width);
@@ -69,10 +69,10 @@ class LaneImage
 	//// void processVan(Line& left_lane, Line& right_lane, Point2f& last_van_pt);
 	//// void processVan(Vec2f left_fit_2, Vec2f right_fit_2);
 	
-	Mat __raw_image;
-	int __row, __col;
-	Mat __calibration_dist;
-	Mat __calibration_mtx;
+	// Mat __raw_image;
+	// int __row, __col;
+	// Mat __calibration_dist;
+	// Mat __calibration_mtx;
 	
 	int __leftx_base, __rightx_base;
 	
@@ -150,7 +150,7 @@ void trainTree(Ptr<ml::DTrees> tree, Mat& sample, Mat& resp, Mat& testdata, size
 #ifdef LREGG
 void trainRegg(Ptr<ml::LogisticRegression> regg, Mat& sample, Mat& resp, Mat& testdata, size_t orignl_row, string field);
 #endif
-void colorThresh(const Mat& image, Mat& binary_output, Vec2f thresh, int layer, string colormap);
+void colorThresh(const Mat& image, Mat& binary_output, Vec2f thresh, int layer);
 void sobelAbsThresh(const Mat& sobel, Mat& binary_output, Vec2f thresh);
 //void sobelMagThresh(const Mat& sobelx, const Mat& sobely, Mat& binary_output, Vec2f thresh);
 void sobelDirThresh(const Mat& sobelx, const Mat& sobely, Mat& binary_output, Vec2f thresh);

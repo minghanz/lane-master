@@ -143,20 +143,23 @@ void import(int argc, char** argv, string& file_name, Mat& image, VideoCapture& 
 		
 		if (argc == 4)
 		{
-			msc[0] = (int)strtol(argv[3], NULL, 10);
-			msc[1] = (int)strtol(argv[3], NULL, 10);
-			reader.set(CAP_PROP_POS_MSEC, msc[0]);  
+			// msc[0] = (int)strtol(argv[3], NULL, 10);
+			msc[0] = 0;
+			msc[1] = (int)strtol(argv[3], NULL, 10);		// when # of input is 4, use it to set end frame
+			// reader.set(CAP_PROP_POS_MSEC, msc[0]);  
 		}
 		else if (argc == 5)
 		{
 			msc[0] = (int)strtol(argv[3], NULL, 10);
 			msc[1] = (int)strtol(argv[4], NULL, 10);
-			reader.set(CAP_PROP_POS_MSEC, msc[0]);  
+			// reader.set(CAP_PROP_POS_MSEC, msc[0]);  
+			reader.set(CV_CAP_PROP_POS_FRAMES, msc[0]);  // set nframe instead of time in ms
+			 
 		}
 		else
 		{
-			msc[0] = -1;
-			msc[1] = -1;
+			msc[0] = 0;
+			msc[1] = 0;
 		}
 	}
 	else

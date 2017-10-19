@@ -38,11 +38,15 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		if (current_fit.size() >= 2)
 		{
 			mean_hist_diff = 0;
+			#ifndef NDEBUG_LI
 			cout << "History_diff: ";
+			#endif
 			for (int i = 0; i < history_diff.size(); i++)
 			{
 				mean_hist_diff += history_diff[i];
+				#ifndef NDEBUG_LI
 				cout << history_diff[i] << " ";
+				#endif
 			}
 			cout << endl;
 			mean_hist_diff = mean_hist_diff / history_diff.size();
@@ -50,8 +54,10 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 			//current_diff = abs(diffs[0])+abs(diffs[1])+abs(diffs[2]);
 		}
 		current_diff = getDiff();
+		#ifndef NDEBUG_LI
 		cout << "Current diff: " << current_diff << ", mean diff: " << mean_hist_diff << ", base_fluctuation: " << base_fluctuation << endl;
 		cout << "paralled_check: " << parallel_check << ", check: " << check << endl;
+		#endif
 		if ( (current_fit.size() == 1 || detected == false || (mean_hist_diff >= 0.3*base_fluctuation && current_diff < 1.5*base_fluctuation))  && check == true && van_consist  == true) // the history is bad, not requiring width check, loosing the fluctuation
 		{
 			if (current_diff < 0.5*base_fluctuation || current_fit.size() == 1 || detected == false)
@@ -85,7 +91,9 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 			
 			fail_detect_count = 0;
 			detected = true;
+			#ifndef NDEBUG_LI
 			cout << "case 1" << endl;
+			#endif
 		}
 		else if (detected == true && current_diff < 0.5*base_fluctuation && check == true && van_consist  == true) // history is good and current one is good  (modified: check should betrue)
 		{
@@ -108,7 +116,9 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 			best_fit_2 = w_history*best_fit_2 + w_current*current_fit_2.back();
 			
 			fail_detect_count = 0;
+			#ifndef NDEBUG_LI
 			cout << "case 2" << endl;
+			#endif
 			
 		}
 		else if (detected == true && current_diff < 1*base_fluctuation && check == true && van_consist  == true) // history is soso(have fluctuation) and current one is good (modified: check should betrue)
@@ -132,7 +142,9 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 			best_fit_2 = (1 - w_current)*best_fit_2 + w_current*current_fit_2.back();
 			
 			fail_detect_count = 0;
+			#ifndef NDEBUG_LI
 			cout << "case 3" << endl;
+			#endif
 		}
 		//else if (detected == false && current_diff < 1*base_fluctuation && check == true && bool  == true )// last frame failed but history is good (has excluded case 1)
 		//{
@@ -170,7 +182,9 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 			w_current = 0;
 			fail_detect_count ++;
 			if (fail_detect_count >= 5) detected = false;
+			#ifndef NDEBUG_LI
 			cout << "case 5" << endl;
+			#endif
 		}
 		__w_current = w_current;
 	}
@@ -215,7 +229,7 @@ float Line::getDistanceToLane()
 	x0 = best_fit_cr[2]*y_eval*y_eval + best_fit_cr[1]*y_eval + best_fit_cr[0];
 	float distance = x0.sum()/x0.size() - veh_loc;
 	
-	#ifndef NDEBUG
+	#ifndef NDEBUG_LI
 	cout << "lane-veh loc: " << veh_loc << endl;
 	cout << "lane-lane loc: " << x0.sum()/x0.size() << endl;
 	#endif
@@ -250,17 +264,22 @@ float Line::getDiff()
 		valarray<float> x_dist = abs(x_new-x_samp);
 		mean_dist = x_dist.max(); // the maximum is more indicating
 		// mean_dist = x_dist.sum()/x_dist.size();
+
+		#ifndef NDEBUG_LI
 		cout << "Dist: ";
 		for (int i = 0; i < 10; i++)
 		{
 			cout << x_dist[i] << " ";
 		}
 		cout << endl;
+		#endif
 	}
 	else
 		mean_dist = 0;
-	
+
+	#ifndef NDEBUG_LI
 	cout << "Mean dist between new fit and last best: " << mean_dist << endl;
+	#endif
 	return mean_dist;
 }
 

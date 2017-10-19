@@ -118,15 +118,13 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 
 
 
-	Mat sobel_x, sobel_y, sobel_angle;
-	Sobel(image, sobel_x, CV_32F, 1, 0, 7); // 3
-	Sobel(image, sobel_y, CV_32F, 0, 1, 7);
-	phase(sobel_x, sobel_y, sobel_angle, true);  // output of phase in degree is [0~360]
-	Mat angle_mask;
-	angle_mask = (sobel_angle >= 10 & sobel_angle <= 80) | (sobel_angle >= 100 & sobel_angle <= 170) | (sobel_angle >= 190 & sobel_angle <= 260) | (sobel_angle >= 280 & sobel_angle <= 350);
-
-
-	bitwise_and(edges, angle_mask, edges); // remove edges with wrong angle
+	// Mat sobel_x, sobel_y, sobel_angle;
+	// Sobel(image, sobel_x, CV_32F, 1, 0, 7); // 3
+	// Sobel(image, sobel_y, CV_32F, 0, 1, 7);
+	// phase(sobel_x, sobel_y, sobel_angle, true);  // output of phase in degree is [0~360]
+	// Mat angle_mask;
+	// angle_mask = (sobel_angle >= 10 & sobel_angle <= 80) | (sobel_angle >= 100 & sobel_angle <= 170) | (sobel_angle >= 190 & sobel_angle <= 260) | (sobel_angle >= 280 & sobel_angle <= 350);
+	// bitwise_and(edges, angle_mask, edges); // remove edges with wrong angle
 
 	Mat cali_mask;
 	Mat erode_kernel = getStructuringElement(MORPH_RECT, Size(7, 7) );
@@ -135,7 +133,6 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 	bitwise_and(edges, cali_mask, edges); // remove the edges caused by warp effect
 
 	int dist_top_thre = (y_bottom_warp_max - van_pt_cali.y)*1/6; 			// may need modification: depends on cali or detect result ?
-
 	edges.rowRange(0, van_pt_cali.y + dist_top_thre) = 0;
 	edges.rowRange(y_bottom_warp_max, image.rows) = 0;  // for caltech data
 
@@ -164,45 +161,49 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 	if (first_sucs)
 	{
 		van_pt_ini = van_pt_obsv;
+		theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
+		theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
 	}
 	updateTrackVar();
 
-	if (ini_flag && !lane_mark.new_result)
+	if (ini_flag)	// van_pt is in good state
 	{
-		Mat blur_edges;
-		LaneDirec(valid_lines_map, edges, blur_edges); // steer_resp_mag
-		DecideChnlThresh(color_img, image, blur_edges); // use normalized one or ?
+		if (!lane_mark.new_result) 		// lane needs reinitialization
+		{
+			Mat blur_edges;
+			LaneDirec(valid_lines_map, edges, blur_edges); // steer_resp_mag
+			DecideChnlThresh(color_img, image, blur_edges); // use normalized one or ?
+		}
+
+		/// generate the trapezoid for warping and masking
+		float y_top_warp = (y_bottom_warp + 5*van_pt_ini.y)/6;
+		float x_van = van_pt_ini.x;
+		float y_van = van_pt_ini.y;
+		float y_bottom = y_bottom_warp;
+		float x_left = 0;
+		float x_right = image.cols - 1;
+		//vector<vector<Point> > warp_test_vec;
+		vector<Point> warp_test;
+		warp_test.push_back(Point((y_top_warp-y_bottom)/(y_van-y_bottom)*(x_van-x_left) + x_left, y_top_warp));
+		warp_test.push_back(Point(x_left, y_bottom ));
+		warp_test.push_back(Point(x_right, y_bottom ));
+		warp_test.push_back(Point((y_top_warp-y_bottom)/(y_van-y_bottom)*(x_van-x_right)+ x_right, y_top_warp));
+		warp_test_vec.clear();
+		warp_test_vec.push_back(warp_test);
+
+		warp_src.clear();
+		warp_src.push_back(Point2f(warp_test_vec[0][0] )); 	// remind that calculation with int could result in weird values when division appears!
+		warp_src.push_back(Point2f(warp_test_vec[0][1] ));
+		warp_src.push_back(Point2f(warp_test_vec[0][2] ));
+		warp_src.push_back(Point2f(warp_test_vec[0][3] ));
+
+		per_mtx = getPerspectiveTransform(warp_src, warp_dst);
+		inv_per_mtx = getPerspectiveTransform(warp_dst, warp_src);
+		
+		warpPerspective(color_img, warped_img, per_mtx, Size(warp_col, warp_row), INTER_NEAREST);
 	}
 
 	#endif
-
-	/// generate the trapezoid for warping and masking
-	float y_top_warp = (y_bottom_warp + 5*van_pt_ini.y)/6;
-	float x_van = van_pt_ini.x;
-	float y_van = van_pt_ini.y;
-	float y_bottom = y_bottom_warp;
-	float x_left = 0;
-	float x_right = image.cols - 1;
-	//vector<vector<Point> > warp_test_vec;
-	vector<Point> warp_test;
-	warp_test.push_back(Point((y_top_warp-y_bottom)/(y_van-y_bottom)*(x_van-x_left) + x_left, y_top_warp));
-	warp_test.push_back(Point(x_left, y_bottom ));
-	warp_test.push_back(Point(x_right, y_bottom ));
-	warp_test.push_back(Point((y_top_warp-y_bottom)/(y_van-y_bottom)*(x_van-x_right)+ x_right, y_top_warp));
-	warp_test_vec.clear();
-	warp_test_vec.push_back(warp_test);
-
-	warp_src.clear();
-	warp_src.push_back(Point2f(warp_test_vec[0][0] )); 	// remind that calculation with int could result in weird values when division appears!
-	warp_src.push_back(Point2f(warp_test_vec[0][1] ));
-	warp_src.push_back(Point2f(warp_test_vec[0][2] ));
-	warp_src.push_back(Point2f(warp_test_vec[0][3] ));
-
-	per_mtx = getPerspectiveTransform(warp_src, warp_dst);
-	inv_per_mtx = getPerspectiveTransform(warp_dst, warp_src);
-
-
-	warpPerspective(color_img, warped_img, per_mtx, Size(warp_col, warp_row), INTER_NEAREST);
 
 
 
@@ -248,6 +249,7 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			valid_lines_idx_right.push_back(i);
 			valid_lines_w_right.push_back(getLineWeight(lines[i]));
 		}
+		#ifdef DRAW
 		else if (check_result == 3)
 		{
 			line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(0,255,0),1);
@@ -260,6 +262,7 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 		{
 			line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(255,0,0),1);
 		}
+		#endif
 	}
 
 	if (valid_lines_idx_left.size() <= 0 || valid_lines_idx_right.size() <= 0)
@@ -300,12 +303,12 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			x_sum += weight_cur*xp;
 			y_sum += weight_cur*yp;
 
+			#ifdef DRAW
 			line(vote_lines_img, Point(xl1,yl1), Point(xl2, yl2), Scalar(0,0,255),1);
 			line(vote_lines_img, Point(xr1,yr1), Point(xr2, yr2), Scalar(0,0,255),1);
-			line(valid_lines_map, Point(xl1,yl1), Point(xl2, yl2), Scalar(255),1);
 			circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1);
-
-
+			#endif
+			line(valid_lines_map, Point(xl1,yl1), Point(xl2, yl2), Scalar(255),1);
 		}
 	}
 	// Point2f van_pt_obsv;
@@ -320,9 +323,10 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 
 	theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
 	theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
-	int fontFace = FONT_HERSHEY_SIMPLEX;
-	double fontScale = 0.5;
-	int thickness = 1;
+
+	// int fontFace = FONT_HERSHEY_SIMPLEX;
+	// double fontScale = 0.5;
+	// int thickness = 1;
 	// string Text1 = "pitch: " + x2str(theta_h*180/CV_PI) + ", yaw: " + x2str(theta_w*180/CV_PI);
 	// putText(vote_lines_img, Text1, Point(10, 140), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 
@@ -409,8 +413,10 @@ float VanPt::getLineWeight(Vec4i line)
 	float gamma_dist = 1.0/40.0, c_dist = 70;
 	float dist_weight = 0.5*(1-tanh(gamma_dist*(dist2ref - c_dist)));
 
-	circle(vote_lines_img, Point(ref_pt), (int)c_dist, Scalar(255,0,0));
-	circle(vote_lines_img, Point(ref_pt), (int)c_dist + (int)(1/gamma_dist), Scalar(255,0,0));
+	#ifdef DRAW
+	// circle(vote_lines_img, Point(ref_pt), (int)c_dist, Scalar(255,0,0));
+	// circle(vote_lines_img, Point(ref_pt), (int)c_dist + (int)(1/gamma_dist), Scalar(255,0,0));
+	#endif
 
 	float weight = length/(y_bottom_warp_max-ref_pt.y)*max((float)0,y_bottom - ref_pt.y)/(y_bottom_warp_max - ref_pt.y)*dist_weight;
 
@@ -490,15 +496,15 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 		filter_confidence = (cur_confidence + confidence)/2;
 	}
 
-
+	#ifdef DRAW
 	circle(vote_lines_img, Point(van_pt_obsv), (int)van_pt_mse, Scalar(0,0,255));
 	circle(vote_lines_img, Point(van_pt_obsv), 5, Scalar(0,0,255), -1);
-
 	rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0));
+	#endif
 
-	int fontFace = FONT_HERSHEY_SIMPLEX;
-	double fontScale = 0.5;
-	int thickness = 1;
+	// int fontFace = FONT_HERSHEY_SIMPLEX;
+	// double fontScale = 0.5;
+	// int thickness = 1;
 	// string Text1 = "conf_w: " + x2str(conf_weight) + ", conf_mse: " + x2str(conf_mse) + ", conf_dist: " + x2str(conf_dist);
 	// string Text2 = "conf_cur: " + x2str(cur_confidence) + ", conf: " + x2str(filter_confidence);
 	// string Text3 = "w: (" + x2str(weight_left) + ", " + x2str(weight_right) + "), w_max: (" + x2str(max_weight_left) + ", " + x2str(max_weight_right) + ")";

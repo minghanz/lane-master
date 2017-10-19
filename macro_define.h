@@ -26,6 +26,8 @@ extern Size img_size; // defined in main.cpp
 #define NDEBUG_GR // GRADIENT
 #define NDEBUG_IN // INITIAL
 #define NDEBUG_TR // TRAIN
+#define NDEBUG_FT // FIT
+#define NDEBUG_LI // LINE
 #define NDEBUG
 //#define NTIME
 #define HIGH_BOT
@@ -37,7 +39,7 @@ extern Size img_size; // defined in main.cpp
 
 //#define COUT
 
-//#define DRAW
+// #define DRAW
 
 #define CALI_VAN // whether prior calibrated vanishing point is available
 

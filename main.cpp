@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 	
 	/// initialize parameters that work cross frames 
 	clock_t t_start = clock();
-	float time_step = 0; 		// counting frames, fed to LaneImage(__nframe)
+	float time_step = msc[0]; 		// counting frames, fed to LaneImage(__nframe)
 	img_size = Size(reader.get(CV_CAP_PROP_FRAME_WIDTH), reader.get(CV_CAP_PROP_FRAME_HEIGHT));
 
 	Line left_lane, right_lane;
@@ -74,7 +74,7 @@ int main(int argc, char** argv)
 	LearnModel learn_model;
 
 	float illu_comp = 1;
-	int nframe = 0;
+	// int nframe = msc[0];
 	
 	#ifdef EVA
 	/// for evaluate
@@ -106,12 +106,12 @@ int main(int argc, char** argv)
 	while (reader.isOpened())
 	{
 		reader.read(image);
-		if(!image.empty() && (msc[1] == -1 || reader.get(CV_CAP_PROP_POS_MSEC) <= msc[1]))
+		if(!image.empty() && (msc[1] == 0 || time_step <= msc[1])) // reader.get(CV_CAP_PROP_POS_MSEC) <= msc[1]
 		{
 			clock_t t0 = clock(); // for loop time
 			clock_t t_last = clock();  // for step time
 			
-			cout << "current time(msc): " << reader.get(CV_CAP_PROP_POS_MSEC) << endl;
+			// cout << "current time(msc): " << reader.get(CV_CAP_PROP_POS_MSEC) << endl;
 			
 			
 			/// initialize for first frame
@@ -139,15 +139,14 @@ int main(int argc, char** argv)
 			illuComp(cali_image, gray, illu_comp);
 			van_pt.initialVan(cali_image, gray, warped_img, lane_mark);
 
-			image = image*illu_comp;
+			// image = image*illu_comp;
 
 			clock_t t_now = clock();
 			cout << "Image prepared, using: " << to_string(((float)(t_now - t_last)) / CLOCKS_PER_SEC) << "s. " << endl;
 			t_last = t_now;
 
 
-
-			LaneImage lane_find_image(image, van_pt, lane_mark, learn_model, cam_mtx, dist_coeff, time_step);
+			LaneImage lane_find_image(warped_img, van_pt, lane_mark, learn_model, time_step);
 
 			t_now = clock();
 			cout << "Image processed, using: " << to_string(((float)(t_now - t_last)) / CLOCKS_PER_SEC) << "s. " << endl;
@@ -342,9 +341,9 @@ int main(int argc, char** argv)
 			}
 			#endif
 				
-
+			#ifdef DRAW
 			/// add results on calibrated image, output the frame
-			addWeighted(lane_find_image.__calibrate_image, 1, newwarp, 0.3, 0, result);
+			addWeighted(cali_image, 1, newwarp, 0.3, 0, result);
 			//// circle(result, lane_find_image.__best_van_pt, 5, Scalar(0, 0, 255), -1); // should be the same as Point(last_van_pt)
 			Scalar van_color = van_pt.ini_success ? Scalar(0,0,255) : Scalar(0,255,0);
 			circle(result, Point(van_pt.van_pt_ini), 5, van_color, -1); // should be the same as Point(last_van_pt)
@@ -432,12 +431,14 @@ int main(int argc, char** argv)
 				
 				// van_pt.renewWarp();
 				
-				t_now = clock();
-				cout << "Vanishing point renewed, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
-				t_last = t_now;
+				// t_now = clock();
+				// cout << "Vanishing point renewed, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+				// t_last = t_now;
 			}	
 			
 			writer.write(result);
+			#endif
+
 			time_step += 1;
 			cout << "Frame " << time_step <<". Processed " <<  to_string((int)(time_step/video_length*100)) << "%. ";
 			cout << "Process time: " << to_string(((float)(clock() - t0))/CLOCKS_PER_SEC) << "s per frame" << endl << endl;

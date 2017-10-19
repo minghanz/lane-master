@@ -66,16 +66,26 @@ void illuComp(Mat& raw_img, Mat& gray, float& illu_comp)
 				limit_low = i;
 				start = true;
 				effective_num_pix = accu_num_pix;
+				#ifndef NDEBUG_IN
 				cout << "effective_num_pix 1: " << effective_num_pix << endl;
+				#endif
 			}
 			if ( accu_num_pix >= 0.8*total_pix && ending == false )
 			{
 				limit_high = i;
 				ending = true;
+
+				#ifndef NDEBUG_IN
 				cout << "effective_num_pix 2: " << effective_num_pix << endl;
+				#endif
+
 				effective_num_pix = accu_num_pix - effective_num_pix;
+
+				#ifndef NDEBUG_IN
 				cout << "accu_num_pix: " << accu_num_pix << endl;
 				cout << "effective_num_pix 3: " << effective_num_pix << endl;
+				#endif
+
 				break;
 			}
 			accu_num_pix += pixhis_gray.at<float>(i);
@@ -84,9 +94,11 @@ void illuComp(Mat& raw_img, Mat& gray, float& illu_comp)
 		}
 		float avg_gray = accu_graylevel / effective_num_pix;
 		//cout << pixhis_gray << endl;
+		#ifndef NDEBUG_IN
 		cout << "total_pix: " << total_pix << ", accu_num_pix: " << accu_num_pix << endl;
 		cout << accu_graylevel << " " << effective_num_pix << endl;
 		cout << "avg_gray: " << avg_gray<< endl;
+		#endif
 		illu_comp = 100 / avg_gray;
 	}
 	
@@ -126,7 +138,7 @@ float LaneImage::get_distance_to_lane(int side)
 	valarray<float> y_eval(y_eval_loc, 10);
 	for (int i = 1; i<10; i++)
 		y_eval[i] = y_eval[i-1] + 0.1; // changed to counting from closer side
-	float veh_loc = __col/2*xm_per_pix;
+	float veh_loc = warp_col/2*xm_per_pix;
 	
 	valarray<float> x0(10);
 	if (side == 1) // left

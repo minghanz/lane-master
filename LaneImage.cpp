@@ -13,8 +13,8 @@ using namespace cv;
 float ym_per_pix = 40./500.;
 float xm_per_pix = 3.7/200.;
 
-int warp_col = 400;
-int warp_row = 500;
+int warp_col = 300; // 400
+int warp_row = 400;	// 500
 
 //// #ifdef DTREE
 //// LaneImage::LaneImage (Mat& per_mtx, Mat& inv_per_mtx, Mat& image, float nframe, int samp_cyc, int ini_flag, int& hist_width, bool first_sucs, int window_half_width, Mat& BGR_sample, Mat& HLS_sample, Mat& BGR_resp, Mat& HLS_resp, 
@@ -24,202 +24,220 @@ int warp_row = 500;
 //// LaneImage::LaneImage (Mat& per_mtx, Mat& inv_per_mtx, Mat& image, float nframe, int samp_cyc, int ini_flag, int& hist_width, bool first_sucs, int window_half_width, Mat& BGR_sample, Mat& HLS_sample, Mat& BGR_resp, Mat& HLS_resp, 
 //// 	Vec3f left_fit, Vec3f right_fit, Vec3f avg_hist_left_fit, Vec3f avg_hist_right_fit, vector<int> chnl_thresh, Ptr<ml::LogisticRegression> BGR_regg, Ptr<ml::LogisticRegression> HLS_regg, Mat dist_coeff, Mat cam_mtx )
 //// #endif
-LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, Mat cam_mtx, Mat dist_coeff, float nframe)
+LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, float nframe)
 {
-	__raw_image = image;
-	__row = image.rows;
-	__col = image.cols;
-	__calibration_dist = dist_coeff;
-	__calibration_mtx = cam_mtx;
+	// __raw_image = image;
+	// __row = image.rows;
+	// __col = image.cols;
+	// __calibration_dist = dist_coeff;
+	// __calibration_mtx = cam_mtx;
+	// __calibration();
 
-	__calibration();
-	
-	//__sobel_kernel_size = 15;
-	__sobel_kernel_size = max(warp_col/80, 5 );
-	vector<int> chnl_thresh = van_pt.chnl_thresh;
-	if (chnl_thresh[0] == 0)
-	{
-	__r_thresh = Vec2f(90, 255); // 2
-	__g_thresh = Vec2f(60, 255); // +
-	__b_thresh = Vec2f(70, 255); // w
-	__h_thresh = Vec2f(0, 25); // y
-	__l_thresh = Vec2f(55, 255); // +
-	__s_thresh = Vec2f(85, 255); // y
-	__abs_x_thresh = Vec2f(10, 100);
-	__abs_y_thresh = Vec2f(10, 100);
-	__mag_thresh = Vec2f(20, 200);
-	__dir_thresh = Vec2f(50, 200); // [0-pi/2] -> [0-255]
-	//__r_thresh = Vec2f(170, 255);
-	//__g_thresh = Vec2f(190, 255);
-	//__b_thresh = Vec2f(190, 255);
-	//__h_thresh = Vec2f(18, 100);
-	//__l_thresh = Vec2f(100, 180);
-	//__s_thresh = Vec2f(55, 255);
-	//__abs_x_thresh = Vec2f(5, 20);
-	//__abs_y_thresh = Vec2f(5, 20);
-	//__mag_thresh = Vec2f(10, 40);
-	//__dir_thresh = Vec2f(0.7, 1.0);
-	}
-	else
-	{
-		__r_thresh = Vec2f(chnl_thresh[2], 255); // 2
-		__g_thresh = Vec2f(chnl_thresh[1], 255); // +
-		__b_thresh = Vec2f(chnl_thresh[0], 255); // w
-		__h_thresh = Vec2f(0, chnl_thresh[3]); // y
-		__l_thresh = Vec2f(chnl_thresh[4], 255); // +
-		__s_thresh = Vec2f(chnl_thresh[5], 255); // y
-		__abs_x_thresh_pre = Vec2f(10, 255); // (10,100)
-		__abs_x_thresh = Vec2f(20, 255); // (10,100) (20, 255)
-		__abs_y_thresh = Vec2f(0, 30); // (10, 50) (0, 20) not used
-		__mag_thresh = Vec2f(50, 255); // (20, 100) not used
-		__dir_thresh = Vec2f(0, 100); // [0-pi/2] -> [0-255] (50, 200)
-		
-		cout << "Color thresh: " << __b_thresh[0] << " " << __g_thresh[0] << " " << __r_thresh[0] << " " << __h_thresh[1] << " " << __l_thresh[0] << " " << __s_thresh[0] << " " << endl;
-		cout << "Adaptive color threshold used. " << endl;
-	}
-	
-	#ifdef DTREE
-	if ( learn_model.BGR_tree.empty() )
-	{
-		__BGR_tree = ml::DTrees::create();
-		cout << "new BGR tree." << endl;
-	}
-	else
-	{
-		__BGR_tree = learn_model.BGR_tree;
-	}
-	if ( learn_model.HLS_tree.empty() )
-	{
-		__HLS_tree = ml::DTrees::create();
-		cout << "new HLS tree." << endl;
-	}
-	else
-	{
-		__HLS_tree = learn_model.HLS_tree;
-		
-	}
-	#endif
-	#ifdef LREGG
-	if ( learn_model.BGR_regg.empty() )
-	{
-		__BGR_regg = ml::LogisticRegression::create();
-		cout << "new BGR regg." << endl;
-	}
-	else
-	{
-		__BGR_regg = learn_model.BGR_regg;
-	}
-	if ( learn_model.HLS_regg.empty() )
-	{
-		__HLS_regg = ml::LogisticRegression::create();
-		cout << "new HLS regg." << endl;
-	}
-	else
-	{
-		__HLS_regg = learn_model.HLS_regg;
-		
-	}
-	#endif
-	
-	__BGR_sample = learn_model.BGR_sample;
-	__HLS_sample = learn_model.HLS_sample;
-	__BGR_resp = learn_model.BGR_resp;
-	__HLS_resp = learn_model.HLS_resp;
-	__samp_cyc = learn_model.samp_cyc;
-	__nframe = nframe;
-	__train_or_not = false;
-	
-	__left_nolane = false;
-	__right_nolane = false;
-	
-	__window_number = 10;
-	//__window_half_width = warp_col/12;
-	__window_half_width = lane_mark.window_half_width;
-	__window_min_pixel = warp_row/__window_number*__window_half_width*2/100; // 1%.   60 for 1280*720(hand set). 
-	cout << "min pixel: " << __window_min_pixel << endl;
-	
-	__initial_frame = ! lane_mark.new_result;
-	__last_left_fit = lane_mark.left_fit_best;
-	__last_right_fit = lane_mark.right_fit_best;
+	// __calibrate_image = image; 
+
 	__left_fit = Vec3f(0, 0, 0);
 	__right_fit = Vec3f(0, 0, 0);
 	__left_fit_cr = Vec3f(0, 0, 0);
 	__right_fit_cr = Vec3f(0, 0, 0);
+
+	if (!van_pt.ini_flag)
+	{
+		cout << "Current frame is not processed due to failed initialization. " << endl;
+	}
+	else
+	{
+		__warped_raw_image = image;
+
+		///////////////////////// color/gradient filter parameters
+		__sobel_kernel_size = max(warp_col/80, 5 );		//__sobel_kernel_size = 15;
+		vector<int> chnl_thresh = van_pt.chnl_thresh;
+		if (chnl_thresh[0] == 0)
+		{
+		__r_thresh = Vec2f(90, 255); // 2
+		__g_thresh = Vec2f(60, 255); // +
+		__b_thresh = Vec2f(70, 255); // w
+		__h_thresh = Vec2f(0, 25); // y
+		__l_thresh = Vec2f(55, 255); // +
+		__s_thresh = Vec2f(85, 255); // y
+		__abs_x_thresh = Vec2f(10, 100);
+		__abs_y_thresh = Vec2f(10, 100);
+		__mag_thresh = Vec2f(20, 200);
+		__dir_thresh = Vec2f(50, 200); // [0-pi/2] -> [0-255]
+		//__r_thresh = Vec2f(170, 255);
+		//__g_thresh = Vec2f(190, 255);
+		//__b_thresh = Vec2f(190, 255);
+		//__h_thresh = Vec2f(18, 100);
+		//__l_thresh = Vec2f(100, 180);
+		//__s_thresh = Vec2f(55, 255);
+		//__abs_x_thresh = Vec2f(5, 20);
+		//__abs_y_thresh = Vec2f(5, 20);
+		//__mag_thresh = Vec2f(10, 40);
+		//__dir_thresh = Vec2f(0.7, 1.0);
+		}
+		else
+		{
+			__r_thresh = Vec2f(chnl_thresh[2], 255); // 2
+			__g_thresh = Vec2f(chnl_thresh[1], 255); // +
+			__b_thresh = Vec2f(chnl_thresh[0], 255); // w
+			__h_thresh = Vec2f(0, chnl_thresh[3]); // y
+			__l_thresh = Vec2f(chnl_thresh[4], 255); // +
+			__s_thresh = Vec2f(chnl_thresh[5], 255); // y
+			__abs_x_thresh_pre = Vec2f(10, 255); // (10,100)
+			__abs_x_thresh = Vec2f(20, 255); // (10,100) (20, 255)
+			__abs_y_thresh = Vec2f(0, 30); // (10, 50) (0, 20) not used
+			__mag_thresh = Vec2f(50, 255); // (20, 100) not used
+			__dir_thresh = Vec2f(0, 100); // [0-pi/2] -> [0-255] (50, 200)
+			#ifndef NDEBUG_CL
+			cout << "Color thresh: " << __b_thresh[0] << " " << __g_thresh[0] << " " << __r_thresh[0] << " " << __h_thresh[1] << " " << __l_thresh[0] << " " << __s_thresh[0] << " " << endl;
+			cout << "Adaptive color threshold used. " << endl;
+			#endif
+		}
+		///////////////////////// decision tree parameters
+		#ifdef DTREE
+		if ( learn_model.BGR_tree.empty() )
+		{
+			__BGR_tree = ml::DTrees::create();
+			cout << "new BGR tree." << endl;
+		}
+		else
+		{
+			__BGR_tree = learn_model.BGR_tree;
+		}
+		if ( learn_model.HLS_tree.empty() )
+		{
+			__HLS_tree = ml::DTrees::create();
+			cout << "new HLS tree." << endl;
+		}
+		else
+		{
+			__HLS_tree = learn_model.HLS_tree;
+			
+		}
+		#endif
+		#ifdef LREGG
+		if ( learn_model.BGR_regg.empty() )
+		{
+			__BGR_regg = ml::LogisticRegression::create();
+			cout << "new BGR regg." << endl;
+		}
+		else
+		{
+			__BGR_regg = learn_model.BGR_regg;
+		}
+		if ( learn_model.HLS_regg.empty() )
+		{
+			__HLS_regg = ml::LogisticRegression::create();
+			cout << "new HLS regg." << endl;
+		}
+		else
+		{
+			__HLS_regg = learn_model.HLS_regg;
+			
+		}
+		#endif
+		
+		__BGR_sample = learn_model.BGR_sample;
+		__HLS_sample = learn_model.HLS_sample;
+		__BGR_resp = learn_model.BGR_resp;
+		__HLS_resp = learn_model.HLS_resp;
+		__samp_cyc = learn_model.samp_cyc;
+		__nframe = nframe;
+		__train_or_not = false;
+		
+		__left_nolane = false;
+		__right_nolane = false;
+
+		///////////////////////// fitting parameters
+		__window_number = 10;
+		//__window_half_width = warp_col/12;
+		__window_half_width = lane_mark.window_half_width;
+		__window_min_pixel = warp_row/__window_number*__window_half_width*2/100; // 1%.   60 for 1280*720(hand set). 
+		#ifndef NDEBUG_FT
+		cout << "min pixel: " << __window_min_pixel << endl;
+		#endif
+		
+		__initial_frame = ! lane_mark.new_result;
+		__last_left_fit = lane_mark.left_fit_best;
+		__last_right_fit = lane_mark.right_fit_best;
+		
+		__left_dist_to_hist = 0;
+		__right_dist_to_hist = 0;
+		__left_curve_dist_to_hist = 0;
+		__right_curve_dist_to_hist = 0;
+		__avg_hist_left_fit = lane_mark.avg_hist_left_fit;
+		__avg_hist_right_fit = lane_mark.avg_hist_right_fit;
+		
+		__first_sucs = van_pt.first_sucs;
+		#ifdef CALI_VAN
+		__min_width_warp = van_pt.min_width_pixel_warp;
+		#else
+		__min_width_warp = warp_col/6;
+		#endif
+
+		///////////////////////////// start to find lanes
+		clock_t t_last = clock();
+		// __transform_matrix = van_pt.per_mtx;
+		// __warp();
+		
+		//__filter_binary = Mat::ones(__row, __col, CV_32F);
+		__warped_filter_image = Mat::ones(warp_row, warp_col, CV_32F);
+		__imageFilter();
+		
+		clock_t t_now = clock();
+		cout << "Image filtered, using " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+		t_last = t_now;
+		
+		__lane_window_out_img = Mat(warp_row, warp_col, CV_8UC3, Scalar(0, 0, 0));
+		__fitLaneMovingWindow(lane_mark.hist_width, lane_mark.last_all_white);
+		
+		t_now = clock();
+		cout << "Image fitted, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+		t_last = t_now;
+		
+		// if (__left_fit != Vec3f(0, 0, 0) && __right_fit != Vec3f(0, 0, 0))
+		// {
+		// 	//__getLaneWidthWarp();
+		// 	get_vanishing_point(van_pt.inv_per_mtx);
+		// }
+		
+		// t_now = clock();
+		// cout << "New vanishing point found, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
+		// t_last = t_now;
+	}
 	
-	__left_dist_to_hist = 0;
-	__right_dist_to_hist = 0;
-	__left_curve_dist_to_hist = 0;
-	__right_curve_dist_to_hist = 0;
-	__avg_hist_left_fit = lane_mark.avg_hist_left_fit;
-	__avg_hist_right_fit = lane_mark.avg_hist_right_fit;
 	
-	__first_sucs = van_pt.first_sucs;
-	#ifdef CALI_VAN
-	__min_width_warp = van_pt.min_width_pixel_warp;
-	#else
-	__min_width_warp = warp_col/6;
-	#endif
+	
+	
 	
 	if (van_pt.ini_flag)
 	{
-	clock_t t_last = clock();
-	__transform_matrix = van_pt.per_mtx;
-	__warp();
-	
-	clock_t t_now = clock();
-	cout << "Image warpped, using " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
-	t_last = t_now;
-	
-	//__filter_binary = Mat::ones(__row, __col, CV_32F);
-	__warped_filter_image = Mat::ones(warp_row, warp_col, CV_32F);
-	__imageFilter();
-	
-	t_now = clock();
-	cout << "Image filtered, using " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
-	t_last = t_now;
-	
-	__lane_window_out_img = Mat(warp_row, warp_col, CV_8UC3, Scalar(0, 0, 0));
-	__fitLaneMovingWindow(lane_mark.hist_width, lane_mark.last_all_white);
-	
-	t_now = clock();
-	cout << "Image fitted, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
-	t_last = t_now;
-	
-	if (__left_fit != Vec3f(0, 0, 0) && __right_fit != Vec3f(0, 0, 0))
-	{
-		//__getLaneWidthWarp();
-		get_vanishing_point(van_pt.inv_per_mtx);
-	}
-	
-	t_now = clock();
-	cout << "New vanishing point found, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
-	t_last = t_now;
+		
 	}
 	else
 		cout << "Current frame is not processed due to failed initialization. " << endl;
 }
 
 
-void LaneImage::__calibration()
-{
-	/// generate an undistorted image (no perspective transforms)
-	if (__calibration_mtx.empty())
-		__calibrate_image = __raw_image;
-	else
-		undistort(__raw_image, __calibrate_image, __calibration_mtx, __calibration_dist);
-	return;
-}
+// void LaneImage::__calibration()		// undistort is done out of LaneImage now
+// {
+// 	/// generate an undistorted image (no perspective transforms)
+// 	if (__calibration_mtx.empty())
+// 		__calibrate_image = __raw_image;
+// 	else
+// 		undistort(__raw_image, __calibrate_image, __calibration_mtx, __calibration_dist);
+// 	return;
+// }
 
-void LaneImage::__warp()
-{
-	/// generate warped binary image or colorful image
-	warpPerspective(__calibrate_image, __warped_raw_image, __transform_matrix, Size(warp_col, warp_row), INTER_NEAREST);
-	//warpPerspective(__filter_binary, __warped_filter_image, __transform_matrix, Size(__col, __row), INTER_NEAREST);
-	#ifndef NDEBUG
-	imshow("warped_raw", __warped_raw_image);
-	#endif
-	return;
-}
+// void LaneImage::__warp()				// warp is done out of LaneImage now
+// {
+// 	/// generate warped binary image or colorful image
+// 	warpPerspective(__calibrate_image, __warped_raw_image, __transform_matrix, Size(warp_col, warp_row), INTER_NEAREST);
+// 	//warpPerspective(__filter_binary, __warped_filter_image, __transform_matrix, Size(__col, __row), INTER_NEAREST);
+// 	#ifndef NDEBUG
+// 	imshow("warped_raw", __warped_raw_image);
+// 	#endif
+// 	return;
+// }
 
 void LaneImage::__imageFilter()
 {
@@ -230,7 +248,7 @@ void LaneImage::__imageFilter()
 	
 	GaussianBlur(gray, gray, Size(5,5), 0 );
 	
-	Mat dilate_kernel = getStructuringElement(MORPH_RECT, Size(5, 5) );
+	Mat dilate_kernel = getStructuringElement(MORPH_RECT, Size(5, 5) );		// prepare for excluding the black zone induced by warping effect
 	dilate(warp_mask, warp_mask, dilate_kernel );
 	#ifndef NDEBUG_CL
 	imshow("warp_mask", warp_mask);
@@ -279,8 +297,9 @@ void LaneImage::__imageFilter()
 	
 	Mat binary_output_white(warp_row, warp_col, CV_32FC1, Scalar(0)), binary_output_yellow(warp_row, warp_col, CV_32FC1, Scalar(0));
 	Mat binary_output_color(warp_row, warp_col, CV_32FC1, Scalar(0));
-	
-	__warped_reshape = __warped_raw_image.reshape(1, warp_row*warp_col);
+
+	// need to reshape no matter whether this is initial_frame, because the training of tree will use it
+	__warped_reshape = __warped_raw_image.reshape(1, warp_row*warp_col);	
 	__warped_reshape.convertTo(__warped_reshape, CV_32FC1);
 	Mat warp_HLS;
 	cvtColor(__warped_raw_image, warp_HLS, COLOR_BGR2HLS);
@@ -298,33 +317,32 @@ void LaneImage::__imageFilter()
 		binary_output_white.convertTo(binary_output_white,CV_32FC1);
 		binary_output_yellow.convertTo(binary_output_yellow,CV_32FC1);
 		*/
-		colorThresh(__warped_raw_image, filter_binary, __b_thresh, 0, "rgb");
+		colorThresh(__warped_raw_image, filter_binary, __b_thresh, 0);
 		binary_output_white = binary_output.mul(filter_binary);
-		
 		#ifndef NDEBUG_CL
 		imshow("masked b-", filter_binary); // no need to namedWindow
 		#endif
-		colorThresh(__warped_raw_image, filter_binary, __g_thresh, 1, "rgb");
+		colorThresh(__warped_raw_image, filter_binary, __g_thresh, 1);
 		binary_output_white = binary_output_white.mul(filter_binary);
 		#ifndef NDEBUG_CL
 		imshow("masked g-", filter_binary);
 		#endif
-		colorThresh(__warped_raw_image, filter_binary, __r_thresh, 2, "rgb");
+		colorThresh(__warped_raw_image, filter_binary, __r_thresh, 2);
 		binary_output_white = binary_output_white.mul(filter_binary);
 		#ifndef NDEBUG_CL
 		imshow("masked r-", filter_binary);
 		#endif
-		colorThresh(__warped_raw_image, filter_binary, __h_thresh, 0, "hls");
+		colorThresh(warp_HLS, filter_binary, __h_thresh, 0);
 		binary_output_white = binary_output_white.mul(filter_binary);
 		#ifndef NDEBUG_CL
 		imshow("masked h-", filter_binary);
 		#endif
-		colorThresh(__warped_raw_image, filter_binary, __l_thresh, 1, "hls");
+		colorThresh(warp_HLS, filter_binary, __l_thresh, 1);
 		binary_output_white = binary_output_white.mul(filter_binary);
 		#ifndef NDEBUG_CL
 		imshow("masked l-", filter_binary);
 		#endif
-		colorThresh(__warped_raw_image, filter_binary, __s_thresh, 2, "hls");
+		colorThresh(warp_HLS, filter_binary, __s_thresh, 2);
 		binary_output_white = binary_output_white.mul(filter_binary);
 		#ifndef NDEBUG_CL
 		imshow("masked s-", filter_binary);
@@ -396,9 +414,9 @@ void LaneImage::__imageFilter()
 		
 		binary_output_color = (binary_output_white + binary_output_yellow)*0.5; // two possible values: 0.5 or 1 
 		
-		double max_val_bi;
-		minMaxLoc(binary_output_color, NULL, &max_val_bi, NULL, NULL);
-		cout << "max of binary_output_color: " << max_val_bi << endl;
+		// double max_val_bi;
+		// minMaxLoc(binary_output_color, NULL, &max_val_bi, NULL, NULL);
+		// cout << "max of binary_output_color: " << max_val_bi << endl;
 		
 		binary_output_color.setTo(0, warp_mask);
 		
@@ -409,8 +427,8 @@ void LaneImage::__imageFilter()
 				cout << to_string(((float)(t_temp4 - t_temp1))/CLOCKS_PER_SEC) << endl;
 		
 		#ifndef NDEBUG
-		cout << binary_output_white.size() << endl;
-		cout << binary_output_yellow.size() << endl;
+		// cout << binary_output_white.size() << endl;
+		// cout << binary_output_yellow.size() << endl;
 		cout << "reshape new color filter. " << endl;
 		imshow("color binary", binary_output_color);
 		//waitKey(0);
@@ -453,8 +471,8 @@ void LaneImage::__imageFilter()
 	int dilate_width = max( (int)round(__window_half_width*0.4),4);
 	int move_dist = max( (int)round(__window_half_width*0.2),2);
 	
-	cout << "dilate width: " << dilate_width << endl; // /5
 	#ifndef NDEBUG_GR
+	cout << "dilate width: " << dilate_width << endl; // /5
 	imshow("filter_binary_p", filter_binary_x_p);
 	imshow("filter_binary_n", filter_binary_x_n);
 	#endif
@@ -465,13 +483,13 @@ void LaneImage::__imageFilter()
 	#ifndef NDEBUG_GR
 	imshow("filter_binary_p_dilate 1", filter_binary_p_move);
 	imshow("filter_binary_n_dilate 1", filter_binary_n_move);
-	#endif
 	cout << "move dist: " << move_dist << endl;
+	#endif
 	Mat expand_kernel = getStructuringElement(MORPH_RECT, Size(dilate_width, 1));
-	cout << "expand_kernel size: " << expand_kernel.size() << endl;
 	dilate(filter_binary_p_move, filter_binary_p_move, expand_kernel);
 	dilate(filter_binary_n_move, filter_binary_n_move, expand_kernel);
 	#ifndef NDEBUG_GR
+	cout << "expand_kernel size: " << expand_kernel.size() << endl;
 	imshow("filter_binary_p_dilate", filter_binary_p_move);
 	imshow("filter_binary_n_dilate", filter_binary_n_move);
 	#endif
@@ -532,17 +550,17 @@ void LaneImage::__imageFilter()
 	return;
 }
 
-void colorThresh(const Mat& image, Mat& binary_output, Vec2f thresh, int layer, string colormap)
+void colorThresh(const Mat& image, Mat& binary_output, Vec2f thresh, int layer)
 {
-	Mat image_cur;
-	if (colormap == "hls")
-		cvtColor(image, image_cur, COLOR_BGR2HLS); // RGB or BGR???
-	else
-		image_cur = image; // not copied
+	// Mat image_cur;
+	// if (colormap == "hls")
+	// 	cvtColor(image, image_cur, COLOR_BGR2HLS); // RGB or BGR???
+	// else
+	// 	image_cur = image; // not copied
 		
 	Mat color_channel(warp_row, warp_col, CV_8UC1);
 	int from_to[2] = {layer, 0};
-	mixChannels(image_cur, color_channel, from_to, 1);
+	mixChannels(image, color_channel, from_to, 1);
 	
 	binary_output = Mat::ones(color_channel.size(), CV_32FC1);
 	Mat mask = (color_channel <= thresh[0]) | (color_channel >= thresh[1]);
@@ -753,7 +771,9 @@ void LaneImage::__laneBase(int& hist_width)
 		__leftx_base = 0;
 		__rightx_base = 0; // then not used
 	}
+	#ifndef NDEBUG_FT
 	cout << "leftx_base: " << __leftx_base << " , right_base: " << __rightx_base << endl;
+	#endif
 	return;
 }
 
@@ -887,154 +907,155 @@ void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Poi
 
 
 
-void LaneImage::get_vanishing_point(Mat inv_per_mtx)
-{
-	float frow = (float)warp_row;
+// void LaneImage::get_vanishing_point(Mat inv_per_mtx)		// now van_pt is not decided by lane detection result
+// {
+// 	float frow = (float)warp_row;
 	
-	valarray<bool> left_lane_inds = __lefty > frow/2;
-	valarray<bool> right_lane_inds = __righty > frow/2;
+// 	valarray<bool> left_lane_inds = __lefty > frow/2;
+// 	valarray<bool> right_lane_inds = __righty > frow/2;
 	
-	valarray<float> leftx(__leftx[left_lane_inds]);
-	valarray<float> rightx(__rightx[right_lane_inds]);
-	valarray<float> lefty(__lefty[left_lane_inds]);
-	valarray<float> righty(__righty[right_lane_inds]);
+// 	valarray<float> leftx(__leftx[left_lane_inds]);
+// 	valarray<float> rightx(__rightx[right_lane_inds]);
+// 	valarray<float> lefty(__lefty[left_lane_inds]);
+// 	valarray<float> righty(__righty[right_lane_inds]);
 	
-	vector<Point2f> ori_pts_van;
+// 	vector<Point2f> ori_pts_van;
 	
-	if (leftx.size() > __leftx.size()/4 && rightx.size() > __rightx.size()/4) // pixels in lower part are more than a threshold
-	{
-		size_t length_left = leftx.size();
-		size_t length_right = rightx.size();
+// 	if (leftx.size() > __leftx.size()/4 && rightx.size() > __rightx.size()/4) // pixels in lower part are more than a threshold
+// 	{
+// 		size_t length_left = leftx.size();
+// 		size_t length_right = rightx.size();
 			
-		Mat X_left(1, length_left, CV_32F);
-		Mat X_right(1, length_right, CV_32F);
-		Mat Y_left(2, length_left, CV_32F, Scalar_<float>(1));
-		Mat Y_right(2, length_right, CV_32F, Scalar_<float>(1));
+// 		Mat X_left(1, length_left, CV_32F);
+// 		Mat X_right(1, length_right, CV_32F);
+// 		Mat Y_left(2, length_left, CV_32F, Scalar_<float>(1));
+// 		Mat Y_right(2, length_right, CV_32F, Scalar_<float>(1));
 			
-		float* line_Yl1 = Y_left.ptr<float>(1);
-		float* line_Xl = X_left.ptr<float>();
-		float* line_Yr1 = Y_right.ptr<float>(1);
-		float* line_Xr = X_right.ptr<float>();
+// 		float* line_Yl1 = Y_left.ptr<float>(1);
+// 		float* line_Xl = X_left.ptr<float>();
+// 		float* line_Yr1 = Y_right.ptr<float>(1);
+// 		float* line_Xr = X_right.ptr<float>();
 			
-		for (int i = 0; i < length_left; i++)
-		{
-			line_Yl1[i] = (frow - 1 - lefty[i]); // from downside
-			line_Xl[i] = leftx[i];
-		}
-		for (int i = 0; i < length_right; i++)
-		{
-			line_Yr1[i] = (frow - 1 -righty[i]);
-			line_Xr[i] = rightx[i];
-		}
-		// fit linear model to the down-half of selected pixels for finding vanishing point for next frame
+// 		for (int i = 0; i < length_left; i++)
+// 		{
+// 			line_Yl1[i] = (frow - 1 - lefty[i]); // from downside
+// 			line_Xl[i] = leftx[i];
+// 		}
+// 		for (int i = 0; i < length_right; i++)
+// 		{
+// 			line_Yr1[i] = (frow - 1 -righty[i]);
+// 			line_Xr[i] = rightx[i];
+// 		}
+// 		// fit linear model to the down-half of selected pixels for finding vanishing point for next frame
 				
-		Mat left_fit = (Y_left.t()).inv(DECOMP_SVD)*(X_left.t());
-		__left_fit_2 = left_fit;
-		Mat right_fit = (Y_right.t()).inv(DECOMP_SVD)*(X_right.t());
-		__right_fit_2 = right_fit;
+// 		Mat left_fit = (Y_left.t()).inv(DECOMP_SVD)*(X_left.t());
+// 		__left_fit_2 = left_fit;
+// 		Mat right_fit = (Y_right.t()).inv(DECOMP_SVD)*(X_right.t());
+// 		__right_fit_2 = right_fit;
 		
-		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - lefty.max()) + __left_fit_2[0], lefty.max())); // the y in the linear model is different from the real y index
-		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - lefty.min()) + __left_fit_2[0], lefty.min()));
-		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - righty.max()) + __right_fit_2[0], righty.max()));
-		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - righty.min()) + __right_fit_2[0], righty.min()));
-	}
-	else
-	{
-		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - __lefty.max()) + __left_fit_2[0], __lefty.max())); // the y in the linear model is different from the real y index
-		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - __lefty.min()) + __left_fit_2[0], __lefty.min()));
-		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - __righty.max()) + __right_fit_2[0], __righty.max()));
-		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - __righty.min()) + __right_fit_2[0], __righty.min()));
-	}
+// 		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - lefty.max()) + __left_fit_2[0], lefty.max())); // the y in the linear model is different from the real y index
+// 		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - lefty.min()) + __left_fit_2[0], lefty.min()));
+// 		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - righty.max()) + __right_fit_2[0], righty.max()));
+// 		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - righty.min()) + __right_fit_2[0], righty.min()));
+// 	}
+// 	else
+// 	{
+// 		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - __lefty.max()) + __left_fit_2[0], __lefty.max())); // the y in the linear model is different from the real y index
+// 		ori_pts_van.push_back(Point2f(__left_fit_2[1]*(frow - 1 - __lefty.min()) + __left_fit_2[0], __lefty.min()));
+// 		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - __righty.max()) + __right_fit_2[0], __righty.max()));
+// 		ori_pts_van.push_back(Point2f(__right_fit_2[1]*(frow - 1 - __righty.min()) + __right_fit_2[0], __righty.min()));
+// 	}
 	
 	
-	vector<Point2f> trs_pts_van;
-	perspectiveTransform(ori_pts_van, trs_pts_van, inv_per_mtx);
+// 	vector<Point2f> trs_pts_van;
+// 	perspectiveTransform(ori_pts_van, trs_pts_van, inv_per_mtx);
 	
-	__left_fit_2_img[1] = - (trs_pts_van[1].x - trs_pts_van[0].x)/(trs_pts_van[1].y - trs_pts_van[0].y); // The k in x = ky+b.negative because of the flipped y
-	__left_fit_2_img[0] = trs_pts_van[1].x - __left_fit_2_img[1]*(frow - 1 - trs_pts_van[1].y);
-	__right_fit_2_img[1] = - (trs_pts_van[3].x - trs_pts_van[2].x)/(trs_pts_van[3].y - trs_pts_van[2].y); // The k in x = ky+b.negative because of the flipped y
-	__right_fit_2_img[0] = trs_pts_van[3].x - __right_fit_2_img[1]*(frow - 1 - trs_pts_van[3].y);
+// 	__left_fit_2_img[1] = - (trs_pts_van[1].x - trs_pts_van[0].x)/(trs_pts_van[1].y - trs_pts_van[0].y); // The k in x = ky+b.negative because of the flipped y
+// 	__left_fit_2_img[0] = trs_pts_van[1].x - __left_fit_2_img[1]*(frow - 1 - trs_pts_van[1].y);
+// 	__right_fit_2_img[1] = - (trs_pts_van[3].x - trs_pts_van[2].x)/(trs_pts_van[3].y - trs_pts_van[2].y); // The k in x = ky+b.negative because of the flipped y
+// 	__right_fit_2_img[0] = trs_pts_van[3].x - __right_fit_2_img[1]*(frow - 1 - trs_pts_van[3].y);
 	
-	/*
-	cout << "left linear model:  " << __left_fit_2_img << endl;
-	cout << "right linear model: " << __right_fit_2_img << endl;
-	*/
+// 	/*
+// 	cout << "left linear model:  " << __left_fit_2_img << endl;
+// 	cout << "right linear model: " << __right_fit_2_img << endl;
+// 	*/
 	
-	__van_pt.y = - (__left_fit_2_img[0] - __right_fit_2_img[0])/(__left_fit_2_img[1] - __right_fit_2_img[1]);
-	__van_pt.x = __left_fit_2_img[1]*__van_pt.y + __left_fit_2_img[0];
-	__van_pt.y = frow - 1 - __van_pt.y;
+// 	__van_pt.y = - (__left_fit_2_img[0] - __right_fit_2_img[0])/(__left_fit_2_img[1] - __right_fit_2_img[1]);
+// 	__van_pt.x = __left_fit_2_img[1]*__van_pt.y + __left_fit_2_img[0];
+// 	__van_pt.y = frow - 1 - __van_pt.y;
 	
-	cout << "vanishing point: " << __van_pt << endl;
+// 	cout << "vanishing point: " << __van_pt << endl;
 	
-	// if points are few, using linear model to replace second order model
-	if (__lefty.min() > frow/2)
-	{
-		__left_fit[2] = 0;
-		__left_fit[1] = __left_fit_2[1];
-		__left_fit[0] = __left_fit_2[0];
-		__left_fit_cr[2] = 0;
-		__left_fit_cr[1] = __left_fit[1]*xm_per_pix/ym_per_pix;
-		__left_fit_cr[0] = __left_fit[0]*xm_per_pix/ym_per_pix/ym_per_pix;
-		cout << "Left lane using linear model. " << endl;
-	}
-	if (__righty.min() > frow/2)
-	{
-		__right_fit[2] = 0;
-		__right_fit[1] = __right_fit_2[1];
-		__right_fit[0] = __right_fit_2[0];
-		__right_fit_cr[2] = 0;
-		__right_fit_cr[1] = __right_fit[1]*xm_per_pix/ym_per_pix;
-		__right_fit_cr[0] = __right_fit[0]*xm_per_pix/ym_per_pix/ym_per_pix;
-		cout << "Right lane using linear model. " << endl;
-	}
+// 	// if points are few, using linear model to replace second order model
+// 	if (__lefty.min() > frow/2)
+// 	{
+// 		__left_fit[2] = 0;
+// 		__left_fit[1] = __left_fit_2[1];
+// 		__left_fit[0] = __left_fit_2[0];
+// 		__left_fit_cr[2] = 0;
+// 		__left_fit_cr[1] = __left_fit[1]*xm_per_pix/ym_per_pix;
+// 		__left_fit_cr[0] = __left_fit[0]*xm_per_pix/ym_per_pix/ym_per_pix;
+// 		cout << "Left lane using linear model. " << endl;
+// 	}
+// 	if (__righty.min() > frow/2)
+// 	{
+// 		__right_fit[2] = 0;
+// 		__right_fit[1] = __right_fit_2[1];
+// 		__right_fit[0] = __right_fit_2[0];
+// 		__right_fit_cr[2] = 0;
+// 		__right_fit_cr[1] = __right_fit[1]*xm_per_pix/ym_per_pix;
+// 		__right_fit_cr[0] = __right_fit[0]*xm_per_pix/ym_per_pix/ym_per_pix;
+// 		cout << "Right lane using linear model. " << endl;
+// 	}
 	
-	return;
+// 	return;
 	
-}
+// }
 
 
 void LaneImage::__laneSanityCheck(int hist_width) // consistent with function getLaneWidthWarp
 {
 
-	/// average lane width in warped image
-	float y_eval_loc = 0; // changed to counting from closer side
-	valarray<float> y_eval(y_eval_loc, 10);
-	float step = warp_row/10;
-	for (int i = 1; i<10; i++)
-		y_eval[i] = y_eval[i-1] + step; // changed to counting from closer side
-	valarray<float> x_l(10);
-	valarray<float> x_r(10);
-	x_l = __left_fit[2]*y_eval*y_eval + __left_fit[1]*y_eval + __left_fit[0];
-	x_r = __right_fit[2]*y_eval*y_eval + __right_fit[1]*y_eval + __right_fit[0];
-	valarray<float> x_dist = abs(x_r-x_l);
-	__dif_dist = x_dist.max()/x_dist.min();
+	// /// average lane width in warped image			// parallel check disabled because of the model is embedded with parallelism
+	// float y_eval_loc = 0; // changed to counting from closer side
+	// valarray<float> y_eval(y_eval_loc, 10);
+	// float step = warp_row/10;
+	// for (int i = 1; i<10; i++)
+	// 	y_eval[i] = y_eval[i-1] + step; // changed to counting from closer side
+	// valarray<float> x_l(10);
+	// valarray<float> x_r(10);
+	// x_l = __left_fit[2]*y_eval*y_eval + __left_fit[1]*y_eval + __left_fit[0];
+	// x_r = __right_fit[2]*y_eval*y_eval + __right_fit[1]*y_eval + __right_fit[0];
+	// valarray<float> x_dist = abs(x_r-x_l);
+	// __dif_dist = x_dist.max()/x_dist.min();
 	
-	valarray<float> curvature_l(10);
-	valarray<float> curvature_r(10);
-	curvature_l = abs(2*__left_fit[2])/pow(( 1 + pow(( 2*__left_fit[2]*y_eval + __left_fit[1]), 2)),1.5);
-	curvature_r = abs(2*__right_fit[2])/pow(( 1 + pow(( 2*__right_fit[2]*y_eval + __right_fit[1]), 2)),1.5);
-	valarray<float> curve_dist = abs(curvature_l-curvature_r);
-	valarray<float> curve_time_a = curvature_l/curvature_r;
-	valarray<float> curve_time_b = curvature_r/curvature_l;
-	__dif_curve = curve_dist.max();
-	__time_curve = max( curve_time_a.max(), curve_time_b.max() );
+	// valarray<float> curvature_l(10);
+	// valarray<float> curvature_r(10);
+	// curvature_l = abs(2*__left_fit[2])/pow(( 1 + pow(( 2*__left_fit[2]*y_eval + __left_fit[1]), 2)),1.5);
+	// curvature_r = abs(2*__right_fit[2])/pow(( 1 + pow(( 2*__right_fit[2]*y_eval + __right_fit[1]), 2)),1.5);
+	// valarray<float> curve_dist = abs(curvature_l-curvature_r);
+	// valarray<float> curve_time_a = curvature_l/curvature_r;
+	// valarray<float> curve_time_b = curvature_r/curvature_l;
+	// __dif_curve = curve_dist.max();
+	// __time_curve = max( curve_time_a.max(), curve_time_b.max() );
 	
-	cout << "Left curvature: ";
-	for (int i = 0; i < 10; i++)
-	{
-		cout << curvature_l[i] << " ";
-	}
-	cout << endl;
-	cout << "Right curvature: ";
-	for (int i = 0; i < 10; i++)
-	{
-		cout << curvature_r[i] << " ";
-	}
-	cout << endl;
+	// cout << "Left curvature: ";
+	// for (int i = 0; i < 10; i++)
+	// {
+	// 	cout << curvature_l[i] << " ";
+	// }
+	// cout << endl;
+	// cout << "Right curvature: ";
+	// for (int i = 0; i < 10; i++)
+	// {
+	// 	cout << curvature_r[i] << " ";
+	// }
+	// cout << endl;
 	
-	cout << "Change of lane width: " << __dif_dist << "Diff of curvature: " << __dif_curve << "Time of curve: " << __time_curve << endl;
+	// cout << "Change of lane width: " << __dif_dist << "Diff of curvature: " << __dif_curve << "Time of curve: " << __time_curve << endl;
 
-		__parallel_check = ( (abs(__left_fit[2]-__right_fit[2])+abs(__left_fit[1]-__right_fit[1])) < 0.2) && __dif_dist < 1.3 && (__dif_curve < 0.0004 || __time_curve < 2); // can change later
+	// __parallel_check = ( (abs(__left_fit[2]-__right_fit[2])+abs(__left_fit[1]-__right_fit[1])) < 0.2) && __dif_dist < 1.3 && (__dif_curve < 0.0004 || __time_curve < 2); // can change later
+		__parallel_check = true;
 		/*
 		float dist2left = left_lane.line_base_pos.back();
 		float dist2right = right_lane.line_base_pos.back();
@@ -1042,8 +1063,10 @@ void LaneImage::__laneSanityCheck(int hist_width) // consistent with function ge
         */
         __bot_width = abs(__left_fit[0]-__right_fit[0]);
         __width_check = ( __bot_width > 0.8 * hist_width && __bot_width < 1.2*hist_width  && __bot_width > __min_width_warp); // __bot_width > warp_col/8
+		#ifndef NDEBUG_FT
 		cout << "para check" << __parallel_check << "width check" << __width_check << endl;
 		cout << "__bot_width: " << __bot_width << ", __min_width_warp: " << __min_width_warp << ", hist_width: " << hist_width << endl;
+		#endif
         // width check disabled temporally
 		return ;// && lane_width_check;
 

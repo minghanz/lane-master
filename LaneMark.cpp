@@ -147,8 +147,9 @@ float getLaneWidthWarp(Vec3f left_fit, Vec3f right_fit)
 	x_r = right_fit[2]*y_eval*y_eval + right_fit[1]*y_eval + right_fit[0];
 	valarray<float> x_dist = abs(x_r-x_l);
 	float mean_dist = x_dist.sum()/x_dist.size();
-	
+	#ifndef NDEBUG_LI
 	cout << "Lane mean dist: " << mean_dist << endl;
+	#endif
 	return mean_dist;
 }
 

@@ -21,9 +21,11 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 	/// find all non-zero pixels
 	vector<Point> nonz_loc;
 	findNonZero(warped_filter_image_U, nonz_loc);
-	
+
+	#ifndef NDEBUG_FT
 	cout << "# of non-zero pixels: " << nonz_loc.size() << endl;
-	
+	#endif
+
 	if (nonz_loc.size() >= 0.75*warp_col*warp_row  )
 	{
 		if (last_all_white)
@@ -78,9 +80,12 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 		valarray<float> lefty(nonzy[left_lane_inds]);
 		valarray<float> rightx(nonzx[right_lane_inds]);
 		valarray<float> righty(nonzy[right_lane_inds]);
-		
+
+		#ifndef NDEBUG_FT
 		cout << "# of left pixels:  " << leftx.size() << endl;
 		cout << "# of right pixels: " << rightx.size() << endl;
+		#endif
+
 		/// safe return
 		if (leftx.size() <= __window_min_pixel || rightx.size() <= __window_min_pixel || 
 			lefty.min() >= warp_row*4/5 || righty.min() >= warp_row*4/5 || lefty.max() <= warp_row/2 || righty.max() <= warp_row/2 ) 
@@ -111,12 +116,12 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 					if (left)
 					{
 						__left_nolane = true;
-						cout << "Left lane is not a lane. "<< endl;
+						cout << "Left side has not marking. "<< endl;
 					}
 					else
 					{
 						__right_nolane = true;
-						cout << "Right lane is not a lane. "<< endl;
+						cout << "Right side has not marking. "<< endl;
 					}
 				}
 			}
@@ -156,9 +161,11 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 			}
 		}
 		
+		#ifndef NDEBUG_FT
 		cout << "# of left pixels fitted:  " << length_left << endl;
 		cout << "# of right pixels fitted: " << length_right << endl;
-		
+		#endif
+
 		Mat X_lane(1, length_left + length_right, CV_32F);
 		Mat Y_lane(4, length_left + length_right, CV_32F, Scalar_<float>(1));
 		Mat W_lane(1, length_left + length_right, CV_32F);
@@ -343,7 +350,7 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 			res_lane.rowRange(length_left, length_left+length_right) = (abs(X_lane.colRange(length_left, length_left+length_right) 
 				- left_fit.at<float>(2)*Y_lane(Range(2,3), Range(length_left, length_left+length_right)) - left_fit.at<float>(1)*Y_lane(Range(1,2), Range(length_left, length_left+length_right)) - left_fit.at<float>(0))).t() + 0.1;
 			
-			res_lane = 5/res_lane;
+			// res_lane = 5/res_lane;
 			
 			// /// judging bifurcation
 			// if (__avg_hist_left_fit != Vec3f(0, 0, 0) && __avg_hist_right_fit != Vec3f(0, 0, 0))
@@ -503,8 +510,6 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 		}
 		
 		int iteration_num = 5;
-		
-		
 		for (int iteration = 0; iteration < iteration_num; iteration++)
 		{
 				Mat res_lane = (abs(X_lane - lane_fit.at<float>(2)*Y_lane.row(2) - lane_fit.at<float>(1)*Y_lane.row(1) - lane_fit.at<float>(0) - lane_fit.at<float>(3)*Y_lane.row(3))).t() + 0.1;
@@ -620,8 +625,9 @@ void LaneImage::trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, v
 			valarray<float> notlane_y(notlane_y_pre[close_lane_inds]);
 			
 			float length_notlane = notlane_x.size();
-			
+			#ifndef NDEBUG_TR
 			cout << "length_peak_l_up: " << length_peak_l_up << ", l_down: " << length_peak_l_down << ", r_up: " << length_peak_r_up << ", r_down: " << length_peak_r_down << ", length_notlane: " << length_notlane << ", length_flip: " << length_flip << endl;
+			#endif
 			/*
 			int n_samp = warp_col * warp_row / 400; // 2000 for 1280*720, 500 for 400*500
 			int n_samp_pos = n_samp / 4;
@@ -748,9 +754,9 @@ void LaneImage::trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, v
 			num_notlane = (int)(min(  length_notlane,  max((float)0.05, length_notlane/ (length_notlane + length_flip))* n_samp_neg  ));
 			num_lane = num_left_up + num_left_down + num_right_up + num_right_down;
 			num_flip = n_samp - num_lane - num_notlane ; // need change, how to handle extreme cases when sample points are few
-			
+			#ifndef NDEBUG_TR
 			cout << "n_sample: " << num_left_up <<" " << num_left_down <<" " << num_right_up <<" " << num_right_down <<" " << num_lane << " " << num_notlane <<" " << num_flip << endl;
-			
+			#endif
 			
 			time_t t_temp2;
 			if ( __last_left_fit == Vec3f(0, 0, 0) || __last_right_fit == Vec3f(0, 0, 0) ) // __nframe == 0
@@ -766,8 +772,9 @@ void LaneImage::trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, v
 				bool use_peak_l_down = length_peak_l_down > 5*n_samp_pos_l_down;
 				bool use_peak_r_up = length_peak_r_up > 5*n_samp_pos_r_up;
 				bool use_peak_r_down = length_peak_r_down > 5*n_samp_pos_r_down;
+				#ifndef NDEBUG_TR
 				cout << "mode_for_pos_samp: " << use_peak_l_up << " " << use_peak_l_down << " " << use_peak_r_up << " " << use_peak_r_down << endl;
-				
+				#endif
 				
 				t_temp2 = clock();
 				
@@ -944,8 +951,10 @@ void LaneImage::trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, v
 				bool use_peak_l_down = length_peak_l_down > n_samp_pos_l_down;
 				bool use_peak_r_up = length_peak_r_up > n_samp_pos_r_up;
 				bool use_peak_r_down = length_peak_r_down > n_samp_pos_r_down;
+				#ifndef NDEBUG_TR
 				cout << "mode_for_pos_samp: " << use_peak_l_up << " " << use_peak_l_down << " " << use_peak_r_up << " " << use_peak_r_down << endl;	
-			
+				#endif
+				
 				t_temp2 = clock();
 			
 				/// sort the pixels and start sampling
@@ -1100,10 +1109,11 @@ void LaneImage::trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, v
 			cout << "Arranged: " << to_string(((float)(t_temp2 - t_temp1))/CLOCKS_PER_SEC) << "s. Sampled: ";
 			cout << to_string(((float)(t_temp3 - t_temp2))/CLOCKS_PER_SEC) << "s. Trained: " << to_string(((float)(t_temp4 - t_temp3))/CLOCKS_PER_SEC) <<"s. Total: ";
 			cout << to_string(((float)(t_temp4 - t_temp1))/CLOCKS_PER_SEC) << endl;
-			
+
+			#ifndef NDEBUG_TR
 			cout << "left lane: " << length_left_up << " " << length_left_down << ", right lane: " << length_right_up << " " << length_right_down << ", nonlane: " << length_notlane << ", zeroloc: " << length_flip << endl;
 			cout << "total: " << length_notlane + length_flip + length_left+length_right << ". real: " << warp_row*warp_col << endl;
-			
+			#endif
 			return;
 }
 #ifdef DTREE

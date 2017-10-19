@@ -79,12 +79,12 @@ public:
     Mat valid_lines_map;
     /////////////////////////////
 
-    bool ini_flag;
+    bool ini_flag;      // based on ini_success, but use history to show whether the van_pt_ini is in good quality
     bool first_sucs;
     bool sucs_before;
     int fail_ini_count;
 
-    bool ini_success;   // used in GaborVote: deciding whether the vote has valid result
+    bool ini_success;   // indicating whether a van_pt_obsv is generated // used in GaborVote: deciding whether the vote has valid result
 
     #ifdef CANNY_VOTE
     Point2f van_pt_obsv;
