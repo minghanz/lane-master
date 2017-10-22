@@ -118,6 +118,14 @@ class LaneImage
 	Vec3f __left_fit_cr, __right_fit_cr;
 	valarray<float> __leftx, __lefty, __rightx, __righty;
 	Mat __lane_window_out_img;
+	float __k_pitch, __b_pitch;
+	vector<vector<Point> > __plot_pts_lr_warp;
+	Mat __inv_per_mtx_comp;
+	bool __split;
+	bool __new_branch_found;
+	int __split_recover_count;
+	int __branch_grow_count;
+	bool __branch_at_left;
 	
 	Vec3f __avg_hist_left_fit, __avg_hist_right_fit;
 	float __left_dist_to_hist, __right_dist_to_hist; // to find the more consist lane

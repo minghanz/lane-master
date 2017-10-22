@@ -53,12 +53,18 @@ public:
 	bool initial_frame;
 	bool last_all_white;
 
+	bool split; // indicating whether a branch of lane is coming
+	bool new_branch_found;
+	int split_recover_count;
+	int branch_grow_count;
+	bool branch_at_left;
+
 public:
 	LaneMark();
 	void recordImgFit(LaneImage& lane_find_image);
 	void recordBestFit(Line& left_lane, Line& right_lane);
 	void recordHistFit();
-	void drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& plot_pts_r, VanPt& van_pt);
+	void drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& plot_pts_r, VanPt& van_pt, LaneImage& lane_find_image);
 };
 
 void recordHistFit_(vector<Vec3f>& hist_fit, Vec3f& avg_hist_fit, Vec3f& new_fit, int& pos_of_renew_fit, bool initial_frame); // have delay of three

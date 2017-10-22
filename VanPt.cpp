@@ -32,7 +32,7 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 
 	float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
 	warp_pix_per_cm = warp_col / real_width_bottom;
-	min_width_pixel_warp = warp_pix_per_cm * 180; // assume lane width should be no less than 200cm
+	min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
 
 	cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
 
@@ -1682,7 +1682,7 @@ void VanPt::drawOn(Mat& newwarp, LaneMark& lane_mark)
 	warp_test_vec.clear();
 	warp_test_vec.push_back(warp_src_int);
 	drawContours(newwarp, warp_test_vec, -1, Scalar(255, 0, 0), 5 );
-	#ifndef NDEBUG
+	#ifndef NDEBUG_IN
 	cout << " current warp vertex: " << warp_test_vec[0][0] << warp_test_vec[0][1] << warp_test_vec[0][2] << warp_test_vec[0][3] << endl;
 	#endif
 }

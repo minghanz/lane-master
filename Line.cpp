@@ -30,6 +30,8 @@ Line::Line(float w_history, bool sanity_check, bool sanity_parallel_check)
 void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 {
 	bool van_consist = true; // van_pt.consist;
+	bool new_branch_found = lane_mark.new_branch_found;
+	bool split = lane_mark.split;
 	int window_half_width = lane_mark.window_half_width;
 	float w_current = 1 - w_history;
 	base_fluctuation = 1.3 * window_half_width;
@@ -58,12 +60,12 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		cout << "Current diff: " << current_diff << ", mean diff: " << mean_hist_diff << ", base_fluctuation: " << base_fluctuation << endl;
 		cout << "paralled_check: " << parallel_check << ", check: " << check << endl;
 		#endif
-		if ( (current_fit.size() == 1 || detected == false || (mean_hist_diff >= 0.3*base_fluctuation && current_diff < 1.5*base_fluctuation))  && check == true && van_consist  == true) // the history is bad, not requiring width check, loosing the fluctuation
+		if ( ( (current_fit.size() == 1 || detected == false || (mean_hist_diff >= 0.3*base_fluctuation && current_diff < 1.5*base_fluctuation))  && check == true && van_consist  == true) || split || new_branch_found || lane_mark.branch_grow_count > 0) // the history is bad, not requiring width check, loosing the fluctuation
 		{
-			if (current_diff < 0.5*base_fluctuation || current_fit.size() == 1 || detected == false)
+			if (current_diff < 0.5*base_fluctuation || current_fit.size() == 1 || detected == false || split || new_branch_found || lane_mark.branch_grow_count > 0) //  && new_branch_found
 				w_current = 1;
 			else
-				w_current = 0.6;
+				w_current = 1; // 0.6
 			if (current_fit.size() == 1)
 			{
 				best_fit = current_fit.back();
@@ -97,7 +99,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		}
 		else if (detected == true && current_diff < 0.5*base_fluctuation && check == true && van_consist  == true) // history is good and current one is good  (modified: check should betrue)
 		{
-			//w_current = 0.1;
+			w_current = 1; // 0.3
 			best_fit = (1 - w_current)*best_fit + w_current*current_fit.back();
 			fitRealWorldCurve();
 			//best_radius_of_curvature = w_history*best_radius_of_curvature + w_current*radius_of_curvature.back();
@@ -113,7 +115,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 				pos_of_renew_diff = (pos_of_renew_diff + 1) % 10;
 			}
 			
-			best_fit_2 = w_history*best_fit_2 + w_current*current_fit_2.back();
+			best_fit_2 = (1 - w_current)*best_fit_2 + w_current*current_fit_2.back();
 			
 			fail_detect_count = 0;
 			#ifndef NDEBUG_LI
@@ -123,7 +125,8 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		}
 		else if (detected == true && current_diff < 1*base_fluctuation && check == true && van_consist  == true) // history is soso(have fluctuation) and current one is good (modified: check should betrue)
 		{
-			w_current *= 0.6;
+			// w_current *= 0.6;
+			w_current = 1;
 			best_fit = (1 - w_current)*best_fit + w_current*current_fit.back();
 			fitRealWorldCurve();
 			//best_radius_of_curvature = (1 - w_current)*best_radius_of_curvature + w_current*radius_of_curvature.back();

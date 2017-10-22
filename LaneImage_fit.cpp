@@ -68,7 +68,7 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 	/// fit the interested pixels (start to loop)
 	Mat lane_fit;
 	Mat left_fit, right_fit; // for first time finding out which lane is closer to history
-	int iteration_subsample_num = 3;
+	int iteration_subsample_num = 3; // 3
 	
 	srand (time(NULL)); // for sampling if oneside dominates
 	bool normal = true; // for indicating whether abnormal cases are found
@@ -88,7 +88,7 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 
 		/// safe return
 		if (leftx.size() <= __window_min_pixel || rightx.size() <= __window_min_pixel || 
-			lefty.min() >= warp_row*4/5 || righty.min() >= warp_row*4/5 || lefty.max() <= warp_row/2 || righty.max() <= warp_row/2 ) 
+			lefty.min() >= warp_row*4/5 || righty.min() >= warp_row*4/5  ) //|| lefty.max() <= warp_row/2 || righty.max() <= warp_row/2
 		{
 			if (iteration_subsample == 0) /// allow makeUpFilter
 			{
@@ -106,7 +106,7 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 					__makeUpFilter(left, warped_filter_image_U, nonz_loc, nonzx, nonzy, hist_width, leftx, lefty, rightx, righty);
 				}
 				if (leftx.size() <= __window_min_pixel || rightx.size() <= __window_min_pixel || 
-					lefty.min() >= warp_row*4/5 || righty.min() >= warp_row*4/5 || lefty.max() <= warp_row/2 || righty.max() <= warp_row/2 ) // check the conditions again
+					lefty.min() >= warp_row*4/5 || righty.min() >= warp_row*4/5 ) // check the conditions again // || lefty.max() <= warp_row/2 || righty.max() <= warp_row/2
 				{
 					cout << "This frame failed: no lane pixel found" << endl;
 					return;
@@ -341,199 +341,358 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 		
 		/// start robust regression
 		
+		Mat regularizer(4,4,CV_32FC1, Scalar(0));
+		regularizer.at<float>(2,2) = 1000*min(max(lefty.min(), (warp_row - lefty.max()) ), max(righty.min() , (warp_row - righty.max()) ) );
+		cout << "regularizer: " << regularizer.at<float>(2,2)  << endl;
+
+		Mat regularizer_left(3,3,CV_32FC1, Scalar(0));		
+		Mat regularizer_right(3,3,CV_32FC1, Scalar(0));
+		regularizer_left.at<float>(2,2) = 1000*max(lefty.min() , (warp_row - lefty.max()) );
+		regularizer_right.at<float>(2,2) = 1000*max(righty.min() , (warp_row - righty.max()) );
+		cout << "regularizer left and right: " << regularizer_left.at<float>(2,2) << " " << regularizer_right.at<float>(2,2) << endl;
+
+		Mat regularizer_warp(2,2, CV_32FC1, Scalar(0));
+		regularizer_warp.at<float>(0,0) = 10*pow(max(warp_row - lefty.max(), warp_row - righty.max()), 4);
+		cout << "regularizer_warp: " << regularizer_warp.at<float>(0,0)  << endl;
+
+		if (iteration_subsample != iteration_subsample_num - 1)
+		{
+			/// initial fit seperately
 			left_fit = (Y_lane(Range(0, 3), Range(0, length_left)).t()).inv(DECOMP_SVD)*(X_lane.colRange(0, length_left).t());
 			right_fit = (Y_lane(Range(0, 3), Range(length_left, length_left + length_right)).t()).inv(DECOMP_SVD)*(X_lane.colRange(length_left, length_left + length_right).t());
 			
+			#ifdef DRAW
+			// draw the current lane shape
+			{
+				vector<Point> plot_warp_left, plot_warp_right;
+				for (int i = 0; i < warp_row; i+= 10)
+				{
+					float y_cur = warp_row - i;
+					float x_cur_left = left_fit.at<float>(0) + left_fit.at<float>(1)*y_cur + left_fit.at<float>(2)*y_cur*y_cur ;
+					float x_cur_right = right_fit.at<float>(0) + right_fit.at<float>(1)*y_cur + right_fit.at<float>(2)*y_cur*y_cur ;
+					plot_warp_left.push_back(Point(x_cur_left, i));
+					plot_warp_right.push_back(Point(x_cur_right, i));
+				}
+				vector<vector<Point> >  plot_pts_lr_warp;
+				plot_pts_lr_warp.push_back(plot_warp_left);
+				plot_pts_lr_warp.push_back(plot_warp_right);
+				Mat inishow_lane_window;
+				__lane_window_out_img.copyTo(inishow_lane_window);
+	
+				for(int i = 0; i < real_length_left; i++)
+				{
+					inishow_lane_window.at<Vec3b>(lefty[i], leftx[i]) = Vec3b(150, 0, 0);
+				}
+				for(int i = 0; i < real_length_right; i++)
+				{
+					inishow_lane_window.at<Vec3b>(righty[i], rightx[i]) = Vec3b(0, 0, 150);
+				}
+				polylines(inishow_lane_window, plot_pts_lr_warp, false, Scalar(0, 255, 0), 1, LINE_4 );
+				imshow("inifit " + x2str(iteration_subsample), inishow_lane_window);
+			}
+			#endif
+
+			/// initial union fit
 			Mat res_lane(X_lane.cols, 1, CV_32FC1);
 			res_lane.rowRange(0, length_left) = (abs(X_lane.colRange(0, length_left) - left_fit.at<float>(2)*Y_lane(Range(2,3), Range(0, length_left)) 
 				- left_fit.at<float>(1)*Y_lane(Range(1,2), Range(0, length_left)) - left_fit.at<float>(0))).t() + 0.1;
 			res_lane.rowRange(length_left, length_left+length_right) = (abs(X_lane.colRange(length_left, length_left+length_right) 
 				- left_fit.at<float>(2)*Y_lane(Range(2,3), Range(length_left, length_left+length_right)) - left_fit.at<float>(1)*Y_lane(Range(1,2), Range(length_left, length_left+length_right)) - left_fit.at<float>(0))).t() + 0.1;
 			
-			// res_lane = 5/res_lane;
-			
-			// /// judging bifurcation
-			// if (__avg_hist_left_fit != Vec3f(0, 0, 0) && __avg_hist_right_fit != Vec3f(0, 0, 0))
-			// {
-			// 	if (iteration_subsample == 0 || normal)
-			// 	{
-			// 		Vec3f left_fit_vec = left_fit;
-			// 		Vec3f right_fit_vec = right_fit;
-			// 		__left_dist_to_hist = __getDiff(left_fit_vec, __avg_hist_left_fit);
-			// 		__right_dist_to_hist = __getDiff(right_fit_vec, __avg_hist_right_fit);
-			// 		__left_curve_dist_to_hist = __getCurveDiff(left_fit_vec, __avg_hist_left_fit);
-			// 		__right_curve_dist_to_hist = __getCurveDiff(right_fit_vec, __avg_hist_right_fit);
-			// 	}
-			// }
-			// if (__left_curve_dist_to_hist > 0.0003 && __right_curve_dist_to_hist < 0.00015)
-			// {
-			// 	normal = false;
-			// 	for (int ind_lane = 0; ind_lane < length_left; ind_lane++)
-			// 	{
-			// 		if (line_Y1[ind_lane] > warp_row/2) // upper part
-			// 			line_W[ind_lane] = 0;
-			// 	}
-			// }
-			// else if (__left_curve_dist_to_hist < 0.00015 && __right_curve_dist_to_hist > 0.0003)
-			// {
-			// 	normal = false;
-			// 	for (int ind_lane = length_left; ind_lane < length_left + length_right; ind_lane++)
-			// 	{
-			// 		if (line_Y1[ind_lane] > warp_row/2) // upper part
-			// 			line_W[ind_lane] = 0;
-			// 	}
-			// }
-			// else
-			// {
-			// 	if (__left_dist_to_hist < 0 && __right_dist_to_hist > 0)// left is bifurcating (__left_dist_to_hist >  __right_dist_to_hist)
-			// 	{
-			// 		normal = false;
-			// 		for (int ind_lane = 0; ind_lane < length_left; ind_lane++)
-			// 		{
-			// 			if (line_Y1[ind_lane] > warp_row/2) // upper part
-			// 				line_W[ind_lane] = 0;
-			// 		}
-			// 	}
-			// 	else if (__left_dist_to_hist > 0 && __right_dist_to_hist < 0)// right is bifurcating(__right_dist_to_hist >  __left_dist_to_hist)
-			// 	{
-			// 		normal = false;
-			// 		for (int ind_lane = length_left; ind_lane < length_left + length_right; ind_lane++)
-			// 		{
-			// 			if (line_Y1[ind_lane] > warp_row/2) // upper part
-			// 				line_W[ind_lane] = 0;
-			// 		}
-			// 	}
-			// }
-			// /////////////////////////////////////////////////////////////
-
-			Mat w_lane(res_lane.rows, 4, CV_32F);
-			w_lane.col(0) = (5/res_lane.col(0)).mul(W_lane.t());
+			Mat w_verti_pos;
+			w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+			res_lane = 1/res_lane.mul(w_verti_pos); //(frow - 1 - Y_left.row(1))large for downside
+			Mat w_lane(res_lane.rows, 4, CV_32F); 
+			w_lane.col(0) = res_lane.col(0).mul(W_lane.t());
 			w_lane.col(1) = w_lane.col(0) + 0;
 			w_lane.col(2) = w_lane.col(0) + 0;
 			w_lane.col(3) = w_lane.col(0) + 0;
-				
-			lane_fit = (Y_lane.mul(w_lane.t())*Y_lane.t()).inv()*Y_lane.mul(w_lane.t())*X_lane.t();
-		/*
-		else
-		{
-			lane_fit = (Y_lane.t()).inv(DECOMP_SVD)*(X_lane.t());
-		
-			if (__left_dist_to_hist < 0 && __right_dist_to_hist > 0)// left is bifurcating (__left_dist_to_hist >  __right_dist_to_hist)
-			{
-				for (int ind_lane = 0; ind_lane < length_left; ind_lane++)
-				{
-					if (line_Y1[ind_lane] > warp_row/2) // upper part
-						line_W[ind_lane] = 0;
-				}
-				/*
-				res_lane.rowRange(length_left, length_left + length_right) *= 4;
-				if (__left_dist_to_hist >  2*__right_dist_to_hist)	
-					res_lane.rowRange(length_left, length_left + length_right) *= 4;
-				*/
-				/*
-			}
-			else if (__left_dist_to_hist > 0 && __right_dist_to_hist < 0)// right is bifurcating(__right_dist_to_hist >  __left_dist_to_hist)
-			{
-				for (int ind_lane = length_left; ind_lane < length_left + length_right; ind_lane++)
-				{
-					if (line_Y1[ind_lane] > warp_row/2) // upper part
-						line_W[ind_lane] = 0;
-				}
-				/*
-				res_lane.rowRange(0, length_left) *= 4;
-				if (__right_dist_to_hist >  2* __left_dist_to_hist)
-					res_lane.rowRange(0, length_left) *= 4;
-				*/
-				/*
-			}
-		}
-		*/
-		if (iteration_subsample == iteration_subsample_num - 1) // last iteration is different
-		{
+
+			// lane_fit = (Y_lane.t()).inv(DECOMP_SVD)*(X_lane.t());
+			lane_fit = (Y_lane.mul(w_lane.t())*Y_lane.t() + regularizer).inv()*Y_lane.mul(w_lane.t())*X_lane.t();
+			
 			int iteration_num = 2;
-			Mat res_lane;
+			if (iteration_subsample != 0)
+			{
+				iteration_num = 5;
+			}
+			float k_pitch, b_pitch;
 			for (int iteration = 0; iteration < iteration_num; iteration++)
 			{
-				res_lane = (abs(X_lane - lane_fit.at<float>(2)*Y_lane.row(2) - lane_fit.at<float>(1)*Y_lane.row(1) - lane_fit.at<float>(0) - lane_fit.at<float>(3)*Y_lane.row(3))).t() + 0.1;
-				
-				res_lane = 1/res_lane + (frow - 1 - Y_lane.row(1)).t()*0.1; //(frow - 1 - Y_left.row(1))large for downside
-				Mat w_lane(res_lane.rows, 4, CV_32F);
+				Mat Y_lane_f = lane_fit.at<float>(2)*Y_lane.row(2) + lane_fit.at<float>(1)*Y_lane.row(1) + lane_fit.at<float>(0) + lane_fit.at<float>(3)*Y_lane.row(3);
+				Mat Y_lane_ff(2, X_lane.cols, CV_32FC1);
+				Y_lane_ff.row(1) = Y_lane_f - warp_col/2;
+				Y_lane_ff.row(0) = Y_lane_ff.row(1).mul(Y_lane.row(1));
+				Mat X_lane_ff = X_lane - warp_col/2;; 
+
+				Mat res_lane = (abs(Y_lane_f - X_lane)).t() + 0.1;
+				res_lane = 1/res_lane; //(frow - 1 - Y_left.row(1))large for downside
+				Mat w_lane = Mat(res_lane.rows, 2, CV_32F);
+				w_lane.col(0) = (W_lane.t()); //res_lane.col(0).mul(W_lane.t())
+				w_lane.col(1) = w_lane.col(0) + 0;
+
+				Mat k_mat = (Y_lane_ff.mul(w_lane.t())*Y_lane_ff.t() + regularizer_warp).inv()*Y_lane_ff.mul(w_lane.t())*X_lane_ff.t();
+				k_pitch = k_mat.at<float>(0,0);
+				b_pitch = k_mat.at<float>(0,1);
+
+				Mat X_lane_f = (X_lane - warp_col/2)/(k_pitch*Y_lane.row(1) + b_pitch) + warp_col/2;
+				res_lane = (abs(X_lane_f - Y_lane_f)).t() + 0.1;
+
+				Mat w_verti_pos;
+				w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+				res_lane = 1/res_lane.mul(w_verti_pos); //(frow - 1 - Y_left.row(1))large for downside
+				w_lane = Mat(res_lane.rows, 4, CV_32F);
 				w_lane.col(0) = res_lane.col(0).mul(W_lane.t());
 				w_lane.col(1) = w_lane.col(0) + 0;
 				w_lane.col(2) = w_lane.col(0) + 0;
 				w_lane.col(3) = w_lane.col(0) + 0;
 				
-				lane_fit = (Y_lane.mul(w_lane.t())*Y_lane.t()).inv()*Y_lane.mul(w_lane.t())*X_lane.t();
+				lane_fit = (Y_lane.mul(w_lane.t())*Y_lane.t() + regularizer).inv()*Y_lane.mul(w_lane.t())*X_lane_f.t();
 			}
-			__left_fit = lane_fit.rowRange(0,3); // Mat(1,3) to Vec3f, OK???
-			__left_fit(0) = __left_fit(0) - lane_fit.at<float>(3);
-			__right_fit = lane_fit.rowRange(0,3);
-			__right_fit(0) = __right_fit(0) + lane_fit.at<float>(3);
-			__leftx = leftx;
-			__lefty = lefty;
-			__rightx = rightx;
-			__righty = righty;
-			
-			/// also train a linear model
-			Mat Y_lane_lin(3, Y_lane.cols, CV_32F);
-			Y_lane_lin.rowRange(0,2) = Y_lane.rowRange(0, 2) + 0;
-			Y_lane_lin.row(2) = Y_lane.row(3) + 0;
-			Mat lane_fit_2 = (Y_lane_lin.t()).inv(DECOMP_SVD)*(X_lane.t());
-			
-			__left_fit_2 = lane_fit_2.rowRange(0, 2);
-			__left_fit_2(0) = __left_fit_2(0) - lane_fit_2.at<float>(2);
-			__right_fit_2 = lane_fit_2.rowRange(0, 2);
-			__right_fit_2(0) = __right_fit_2(0) + lane_fit_2.at<float>(2);
-			
+			__k_pitch = k_pitch;
+			__b_pitch = b_pitch;
+			cout << "k_pitch: " << __k_pitch << ", y0: " << int(-__b_pitch/__k_pitch) << endl;
+			cout << "b_pitch: " << __b_pitch << ", y1: " << int(1/__k_pitch -__b_pitch/__k_pitch ) << endl;
 
-			__left_fit_cr[0] = __left_fit[0]*xm_per_pix;
-			__left_fit_cr[1] = __left_fit[1]*xm_per_pix/ym_per_pix;
-			__left_fit_cr[2] = __left_fit[2]*xm_per_pix/ym_per_pix/ym_per_pix;
-			__right_fit_cr[0] = __right_fit[0]*xm_per_pix;
-			__right_fit_cr[1] = __right_fit[1]*xm_per_pix/ym_per_pix;
-			__right_fit_cr[2] = __right_fit[2]*xm_per_pix/ym_per_pix/ym_per_pix;
-			
-			
-			/// train decision tree
-			__laneSanityCheck(hist_width);
-			
-			if ( (__parallel_check && __width_check) || __nframe < 5)
+			#ifdef DRAW
+			// draw the current lane shape
 			{
-				__train_or_not = true;
-				trainmodel(warped_filter_image_U, nonzx, nonzy, left_lane_inds, right_lane_inds);
+				vector<Point> plot_warp_left, plot_warp_right;
+				for (int i = 0; i < warp_row; i+= 10)
+				{
+					float y_cur = warp_row - i;
+					float x_cur_left = (lane_fit.at<float>(0) + lane_fit.at<float>(1)*y_cur + lane_fit.at<float>(2)*y_cur*y_cur - lane_fit.at<float>(3) - warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
+					float x_cur_right = (lane_fit.at<float>(0) + lane_fit.at<float>(1)*y_cur + lane_fit.at<float>(2)*y_cur*y_cur + lane_fit.at<float>(3) - warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
+					plot_warp_left.push_back(Point(x_cur_left, i));
+					plot_warp_right.push_back(Point(x_cur_right, i));
+				}
+				vector<vector<Point> >  plot_pts_lr_warp;
+				plot_pts_lr_warp.push_back(plot_warp_left);
+				plot_pts_lr_warp.push_back(plot_warp_right);
+				Mat inishow_lane_window;
+				__lane_window_out_img.copyTo(inishow_lane_window);
+	
+				for(int i = 0; i < real_length_left; i++)
+				{
+					inishow_lane_window.at<Vec3b>(lefty[i], leftx[i]) = Vec3b(150, 0, 0);
+				}
+				for(int i = 0; i < real_length_right; i++)
+				{
+					inishow_lane_window.at<Vec3b>(righty[i], rightx[i]) = Vec3b(0, 0, 150);
+				}
+				polylines(inishow_lane_window, plot_pts_lr_warp, false, Scalar(0, 255, 0), 1, LINE_4 );
+				imshow("ini_unionfit" + x2str(iteration_subsample), inishow_lane_window);
+			}
+			#endif
+
+			if (iteration_subsample != 0)
+			{
+				float y0 = -__b_pitch/__k_pitch;
+				float y1 = 1/__k_pitch + y0;
+				float x_top_left = (y1 - warp_row)/(y1 - y0)*warp_col/2;
+				float x_top_right = (y1 + warp_row - 2*y0)/(y1 - y0)*warp_col/2;
+				
+				float x_bot_left = (y1 - 0)/(y1 - y0)*warp_col/2;
+				float x_bot_right = (y1 + 0 - 2*y0)/(y1 - y0)*warp_col/2;
+				
+				if (abs(__k_pitch) > 2e-5)
+				{
+					vector<Point2f> warp_src_comp, warp_dst_comp;
+					warp_dst_comp.push_back(Point2f(0, 0));
+					warp_dst_comp.push_back(Point2f(0, warp_row));
+					warp_dst_comp.push_back(Point2f(warp_col , warp_row));
+					warp_dst_comp.push_back(Point2f(warp_col , 0));
+					float x_shrink = -warp_row*__k_pitch*warp_col;
+					warp_src_comp.push_back(Point2f(x_top_left, 0));
+					warp_src_comp.push_back(Point2f(x_bot_left, warp_row));
+					warp_src_comp.push_back(Point2f(x_bot_right, warp_row));
+					warp_src_comp.push_back(Point2f(x_top_right , 0));
+	
+					__inv_per_mtx_comp = getPerspectiveTransform(warp_dst_comp, warp_src_comp);
+					#ifndef NDEBUG
+					cout << " compensate warp vertex: " << warp_src_comp[0] << warp_src_comp[1] << warp_src_comp[2] << warp_src_comp[3] << endl;
+					#endif
+				}
+
+				if (__k_pitch > 0.001)
+				{
+					__split = true;
+					__split_recover_count = min(__split_recover_count+1, 10);
+				}
+				else if (__k_pitch < 0.0001)
+				{
+					__split_recover_count = max(__split_recover_count-1, 0);
+					if (__split_recover_count == 0)
+					{
+						__split = false;
+					}
+				}
+
 			}
 			
+		}
+		else
+		{
+			cout << "split: " << __split << endl;
+			cout << "new_branch_found: " << __new_branch_found << endl;
+			if (__split)
+			{
+				// left_fit = (Y_lane(Range(0, 3), Range(0, length_left)).t()).inv(DECOMP_SVD)*(X_lane.colRange(0, length_left).t());
+				// right_fit = (Y_lane(Range(0, 3), Range(length_left, length_left + length_right)).t()).inv(DECOMP_SVD)*(X_lane.colRange(length_left, length_left + length_right).t());
+				
 
-			//cout << "real formula from trans: [" << __left_fit[0]*xm_per_pix << ", " << __left_fit[1]*xm_per_pix/ym_per_pix << ", " << __left_fit[2]*xm_per_pix/ym_per_pix/ym_per_pix << "]" << endl;
-			// Mat(1,3) to Vec3f, OK???	
-			break;
+				left_fit = (Y_lane(Range(0, 3), Range(0, length_left))*Y_lane(Range(0, 3), Range(0, length_left)).t() + regularizer_left).inv()
+							*Y_lane(Range(0, 3), Range(0, length_left))*(X_lane.colRange(0, length_left).t());
+				right_fit = (Y_lane(Range(0, 3), Range(length_left, length_left + length_right))*Y_lane(Range(0, 3), Range(length_left, length_left + length_right)).t() + regularizer_right).inv()
+							*Y_lane(Range(0, 3), Range(length_left, length_left + length_right))*(X_lane.colRange(length_left, length_left + length_right).t());
+					
+				__left_fit = left_fit; // Mat(1,3) to Vec3f, OK???
+				__right_fit = right_fit;
+				__leftx = leftx;
+				__lefty = lefty;
+				__rightx = rightx;
+				__righty = righty;
+
+				#ifdef DRAW
+				// draw the current lane shape
+				vector<Point> plot_warp_left, plot_warp_right;
+				for (int i = 0; i < warp_row; i += 10)
+				{
+					float y_cur = warp_row - i;
+					float x_cur_left = __left_fit(0) + __left_fit(1) * y_cur + __left_fit(2) * y_cur * y_cur ;
+					float x_cur_right = __right_fit(0) + __right_fit(1) * y_cur + __right_fit(2) * y_cur * y_cur ;
+					plot_warp_left.push_back(Point(x_cur_left, i));
+					plot_warp_right.push_back(Point(x_cur_right, i));
+				}
+				__plot_pts_lr_warp.clear();
+				__plot_pts_lr_warp.push_back(plot_warp_left);
+				__plot_pts_lr_warp.push_back(plot_warp_right);
+				polylines(__lane_window_out_img, __plot_pts_lr_warp, false, Scalar(0, 255, 0), 1, LINE_4);
+				#endif
+
+				/// train decision tree
+				__laneSanityCheck(hist_width);
+
+				if ((__parallel_check && __width_check) || __nframe < 5)
+				{
+					__train_or_not = true;
+					trainmodel(warped_filter_image_U, nonzx, nonzy, left_lane_inds, right_lane_inds);
+				}
+
+				//cout << "real formula from trans: [" << __left_fit[0]*xm_per_pix << ", " << __left_fit[1]*xm_per_pix/ym_per_pix << ", " << __left_fit[2]*xm_per_pix/ym_per_pix/ym_per_pix << "]" << endl;
+				// Mat(1,3) to Vec3f, OK???
+				break;
+			}
+			else
+			{
+				Mat X_lane_f = (X_lane - warp_col/2)/(__k_pitch*Y_lane.row(1) + __b_pitch) + warp_col/2;
+				lane_fit = (Y_lane.t()).inv(DECOMP_SVD)*(X_lane_f.t());
+				
+				int iteration_num = 5;
+				for (int iteration = 0; iteration < iteration_num; iteration++)
+				{
+					Mat res_lane = (abs(X_lane_f - lane_fit.at<float>(2)*Y_lane.row(2) - lane_fit.at<float>(1)*Y_lane.row(1) - lane_fit.at<float>(0) - lane_fit.at<float>(3)*Y_lane.row(3))).t() + 0.1;
+					
+					Mat w_verti_pos;
+					w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+					// sqrt((frow - 1 - Y_lane.row(1)).t(), w_verti_pos);		// 0~20
+					// log((frow - 1 - Y_lane.row(1)).t(), w_verti_pos);
+					res_lane = 1/res_lane.mul(w_verti_pos); //(frow - 1 - Y_left.row(1))large for downside
+					Mat w_lane = Mat(res_lane.rows, 4, CV_32F);
+					w_lane.col(0) = res_lane.col(0).mul(W_lane.t());
+					w_lane.col(1) = w_lane.col(0) + 0;
+					w_lane.col(2) = w_lane.col(0) + 0;
+					w_lane.col(3) = w_lane.col(0) + 0;
+					
+					lane_fit = (Y_lane.mul(w_lane.t())*Y_lane.t() + regularizer).inv()*Y_lane.mul(w_lane.t())*X_lane_f.t();
+				}
+
+				__left_fit = lane_fit.rowRange(0, 3); // Mat(1,3) to Vec3f, OK???
+				__left_fit(0) = __left_fit(0) - lane_fit.at<float>(3);
+				__right_fit = lane_fit.rowRange(0, 3);
+				__right_fit(0) = __right_fit(0) + lane_fit.at<float>(3);
+				__leftx = leftx;
+				__lefty = lefty;
+				__rightx = rightx;
+				__righty = righty;
+
+				#ifdef DRAW
+				// draw the current lane shape
+				vector<Point> plot_warp_left, plot_warp_right;
+				for (int i = 0; i < warp_row; i += 10)
+				{
+					float y_cur = warp_row - i;
+					float x_cur_left = (__left_fit(0) + __left_fit(1) * y_cur + __left_fit(2) * y_cur * y_cur - warp_col / 2) * (__k_pitch * y_cur + __b_pitch) + warp_col / 2;
+					float x_cur_right = (__right_fit(0) + __right_fit(1) * y_cur + __right_fit(2) * y_cur * y_cur - warp_col / 2) * (__k_pitch * y_cur + __b_pitch) + warp_col / 2;
+					plot_warp_left.push_back(Point(x_cur_left, i));
+					plot_warp_right.push_back(Point(x_cur_right, i));
+				}
+				__plot_pts_lr_warp.clear();
+				__plot_pts_lr_warp.push_back(plot_warp_left);
+				__plot_pts_lr_warp.push_back(plot_warp_right);
+				polylines(__lane_window_out_img, __plot_pts_lr_warp, false, Scalar(0, 255, 0), 1, LINE_4);
+				#endif
+
+				/// train decision tree
+				__laneSanityCheck(hist_width);
+
+				if ((__parallel_check && __width_check) || __nframe < 5)
+				{
+					__train_or_not = true;
+					trainmodel(warped_filter_image_U, nonzx, nonzy, left_lane_inds, right_lane_inds);
+				}
+
+				//cout << "real formula from trans: [" << __left_fit[0]*xm_per_pix << ", " << __left_fit[1]*xm_per_pix/ym_per_pix << ", " << __left_fit[2]*xm_per_pix/ym_per_pix/ym_per_pix << "]" << endl;
+				// Mat(1,3) to Vec3f, OK???
+				break;
+			}
 		}
 		
-		int iteration_num = 5;
-		for (int iteration = 0; iteration < iteration_num; iteration++)
-		{
-				Mat res_lane = (abs(X_lane - lane_fit.at<float>(2)*Y_lane.row(2) - lane_fit.at<float>(1)*Y_lane.row(1) - lane_fit.at<float>(0) - lane_fit.at<float>(3)*Y_lane.row(3))).t() + 0.1;
-					
-				Mat w_lane(res_lane.rows, 4, CV_32F);
-				w_lane.col(0) = (5/res_lane.col(0)).mul(W_lane.t());
-				w_lane.col(1) = w_lane.col(0) + 0;
-				w_lane.col(2) = w_lane.col(0) + 0;
-				w_lane.col(3) = w_lane.col(0) + 0;
-				
-				lane_fit = (Y_lane.mul(w_lane.t())*Y_lane.t()).inv()*Y_lane.mul(w_lane.t())*X_lane.t();
-		}
 		time_t t_temp7 = clock();
+
+		
 		
 		/// renew interested pixels
 		float decay_coeff = 0.5; // 0.4
+		if (iteration_subsample == 0)
+		{
+			decay_coeff = 0.8;
+		}
 		float left_fit_at[3] = {lane_fit.at<float>(0) - lane_fit.at<float>(3), lane_fit.at<float>(1), lane_fit.at<float>(2)};
 		float right_fit_at[3] = {lane_fit.at<float>(0) + lane_fit.at<float>(3), lane_fit.at<float>(1), lane_fit.at<float>(2)};
 		
-		left_lane_inds = (nonzx > left_fit_at[2]*(frow - 1 - nonzy)*(frow - 1 - nonzy) + left_fit_at[1]*(frow - 1 - nonzy) + left_fit_at[0] - __window_half_width*decay_coeff) 
-		& (nonzx < left_fit_at[2]*(frow - 1 - nonzy)*(frow - 1 - nonzy) + left_fit_at[1]*(frow - 1 - nonzy) + left_fit_at[0] + __window_half_width*decay_coeff);
+		valarray<float> left_fy = left_fit_at[2]*(frow - 1 - nonzy)*(frow - 1 - nonzy) + left_fit_at[1]*(frow - 1 - nonzy) + left_fit_at[0];
+		valarray<float> right_fy = right_fit_at[2]*(frow - 1 - nonzy)*(frow - 1 - nonzy) + right_fit_at[1]*(frow - 1 - nonzy) + right_fit_at[0];
 		
-		right_lane_inds = (nonzx > right_fit_at[2]*(frow - 1 - nonzy)*(frow - 1 - nonzy) + right_fit_at[1]*(frow - 1 - nonzy) + right_fit_at[0] - __window_half_width*decay_coeff) 
-		& (nonzx < right_fit_at[2]*(frow - 1 - nonzy)*(frow - 1 - nonzy) + right_fit_at[1]*(frow - 1 - nonzy) + right_fit_at[0] + __window_half_width*decay_coeff);	
+		float fcol = warp_col;
+		if (__branch_grow_count+1 > 0)
+		{
+			float window_height = warp_row/__window_number;
+			int actual_branch_count = __branch_grow_count + 1;
+			if (__branch_at_left)
+			{
+				left_lane_inds = ( nonzy < window_height*(__window_number-actual_branch_count/3) ) & (nonzx > (left_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 - __window_half_width*decay_coeff) 
+				& (nonzx < (left_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 + __window_half_width*decay_coeff);
+				right_lane_inds = (nonzx > (right_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 - __window_half_width*decay_coeff) 
+				& (nonzx < (right_fy - fcol/2)*( (frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 + __window_half_width*decay_coeff);	
+			}
+			else
+			{
+				right_lane_inds = ( nonzy < window_height*(__window_number-actual_branch_count/3) ) & (nonzx > (right_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 - __window_half_width*decay_coeff) 
+				& (nonzx < (right_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 + __window_half_width*decay_coeff);
+				left_lane_inds = (nonzx > (left_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 - __window_half_width*decay_coeff) 
+				& (nonzx < (left_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 + __window_half_width*decay_coeff);	
+			}
+		}
+		else
+		{
+			left_lane_inds = (nonzx > (left_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 - __window_half_width*decay_coeff) 
+			& (nonzx < (left_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 + __window_half_width*decay_coeff);
+			
+			right_lane_inds = (nonzx > (right_fy - fcol/2)*((frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 - __window_half_width*decay_coeff) 
+			& (nonzx < (right_fy - fcol/2)*( (frow - 1 - nonzy)*__k_pitch + __b_pitch) + fcol/2 + __window_half_width*decay_coeff);	
+		}
+		
 		
 		time_t t_temp8 = clock();
 		cout << "Newarray: " << to_string(((float)(t_temp5 - t_temp4))/CLOCKS_PER_SEC) << "s. Tomat: ";

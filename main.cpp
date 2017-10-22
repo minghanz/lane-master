@@ -196,7 +196,7 @@ int main(int argc, char** argv)
 			if ( lane_mark.new_result ) // current frame succeeds
 			{
 				vector<Point> plot_pts_l, plot_pts_r;
-				lane_mark.drawOn(newwarp, plot_pts_l, plot_pts_r, van_pt);
+				lane_mark.drawOn(newwarp, plot_pts_l, plot_pts_r, van_pt, lane_find_image);
 			
 				#ifdef EVA
 				/// evaluate the result quantitatively

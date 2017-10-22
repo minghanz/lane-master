@@ -21,6 +21,11 @@ LaneMark::LaneMark()
 	new_result = false;
 	initial_frame = true;
 	last_all_white = false;
+
+	split = false;
+	split_recover_count = 0;
+	branch_grow_count = 0;
+	branch_at_left = false;
 }
 
 void LaneMark::recordImgFit(LaneImage& lane_find_image)
@@ -30,6 +35,12 @@ void LaneMark::recordImgFit(LaneImage& lane_find_image)
 	
 	initial_frame = lane_find_image.__initial_frame;
 	new_result = (left_fit_img != Vec3f(0, 0, 0) && right_fit_img != Vec3f(0, 0, 0));
+
+	split = lane_find_image.__split;
+	new_branch_found = lane_find_image.__new_branch_found;
+	split_recover_count = lane_find_image.__split_recover_count;
+	branch_grow_count = lane_find_image.__branch_grow_count;
+	branch_at_left = lane_find_image.__branch_at_left;
 }
 
 void LaneMark::recordBestFit(Line& left_lane, Line& right_lane)
@@ -42,7 +53,8 @@ void LaneMark::recordBestFit(Line& left_lane, Line& right_lane)
 		right_fit_w = right_lane.__w_current;
 	
 		float mean_dist = getLaneWidthWarp(left_fit_best, right_fit_best);
-		window_half_width = (int)(mean_dist/6.0); // 6 / 0.125
+		window_half_width = max(5, (int)(mean_dist/6.0)); // 6 / 0.125
+		cout << "window_half_width: " << window_half_width << endl;
 	}
 	else
 	{
@@ -55,9 +67,9 @@ void LaneMark::recordHistFit()
 {
 	if (new_result)
 	{
-		recordHistFit_(hist_fit_left, avg_hist_left_fit, left_fit_best, pos_of_renew_fit_left, initial_frame);
-		recordHistFit_(hist_fit_right, avg_hist_right_fit, right_fit_best, pos_of_renew_fit_right, initial_frame);
-		if (avg_hist_left_fit != Vec3f(0, 0, 0) && avg_hist_right_fit != Vec3f(0, 0, 0))
+		recordHistFit_(hist_fit_left, avg_hist_left_fit, left_fit_best, pos_of_renew_fit_left, initial_frame || split || new_branch_found || branch_grow_count > 0);
+		recordHistFit_(hist_fit_right, avg_hist_right_fit, right_fit_best, pos_of_renew_fit_right, initial_frame || split || new_branch_found ||  branch_grow_count > 0);
+		if (avg_hist_left_fit != Vec3f(0, 0, 0) && avg_hist_right_fit != Vec3f(0, 0, 0) && branch_grow_count == 0)
 		{
 			hist_width = abs(avg_hist_right_fit[0] - avg_hist_left_fit[0]);
 		}
@@ -154,7 +166,7 @@ float getLaneWidthWarp(Vec3f left_fit, Vec3f right_fit)
 }
 
 
-void LaneMark::drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& plot_pts_r, VanPt& van_pt)
+void LaneMark::drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& plot_pts_r, VanPt& van_pt, LaneImage& lane_find_image)
 {
 	Size warp_size = Size(warp_col, warp_row);
 	Mat warp_zero(warp_size, CV_8UC3, Scalar(0, 0, 0));
@@ -196,6 +208,10 @@ void LaneMark::drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& pl
 		fillPoly(warp_zero, plot_pts_vec, Scalar(0, 255, 0) );
 		
 	Mat newwarp_lanemark(newwarp.size(), CV_8UC3, Scalar(0,0,0));
+	if (abs(lane_find_image.__k_pitch) > 2e-5 && (!lane_find_image.__split))
+	{
+		warpPerspective(warp_zero, warp_zero, lane_find_image.__inv_per_mtx_comp, warp_size );
+	}
 	warpPerspective(warp_zero, newwarp_lanemark, van_pt.inv_per_mtx, img_size );
 	newwarp = newwarp + newwarp_lanemark;
 }

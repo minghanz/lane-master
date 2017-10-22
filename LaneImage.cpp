@@ -39,6 +39,13 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 	__right_fit = Vec3f(0, 0, 0);
 	__left_fit_cr = Vec3f(0, 0, 0);
 	__right_fit_cr = Vec3f(0, 0, 0);
+	__k_pitch = 0;
+	__b_pitch = 1;
+	__split = lane_mark.split;
+	__new_branch_found = false;
+	__split_recover_count = lane_mark.split_recover_count;
+	__branch_grow_count = lane_mark.branch_grow_count;
+	__branch_at_left = lane_mark.branch_at_left;
 
 	if (!van_pt.ini_flag)
 	{
@@ -617,6 +624,14 @@ void LaneImage::__laneBase(int& hist_width)
 {
 	if ( __initial_frame ) // originally only left
 	{
+
+		__split = false;
+		__new_branch_found = false;
+		__split_recover_count = 0;
+		__branch_grow_count = 0;
+		__branch_at_left = false;
+
+
 		/// histogram to find the base for fitting
 		Mat histogram(1, warp_col, CV_32FC1, Scalar(0));
 		//float* line_his = histogram.ptr<float>();
@@ -766,6 +781,108 @@ void LaneImage::__laneBase(int& hist_width)
 			//}
 		//}
 	}
+	else if ( __split )
+	{
+		/// histogram to find the base for fitting
+		Mat histogram(1, warp_col, CV_32FC1, Scalar(0));
+		//float* line_his = histogram.ptr<float>();
+		for (int i = 0; i < warp_row/4; i++ )
+		{
+			histogram += __warped_filter_image.row(i);
+		}
+		
+		histogram= histogram.mul(__warped_filter_image.row(0));
+
+				
+		int midpoint = warp_col/2;
+		double max_histogram_l, max_histogram_r;
+		int left_center = __last_left_fit[2]*(warp_row - 1)*(warp_row - 1)+__last_left_fit[1]*(warp_row - 1) + __last_left_fit[0];
+		int right_center = __last_right_fit[2]*(warp_row - 1)*(warp_row - 1)+__last_right_fit[1]*(warp_row - 1) + __last_right_fit[0];
+		int left_l = max(0, int(left_center - __window_half_width));
+		int left_r = min(warp_col, int(left_center + __window_half_width));
+		int right_l = max(0, int(right_center - __window_half_width));
+		int right_r = min(warp_col, int(right_center + __window_half_width));
+		
+		minMaxIdx(histogram.colRange(left_l, left_r), NULL, &max_histogram_l, NULL, NULL);
+		minMaxIdx(histogram.colRange(right_l, right_r), NULL, &max_histogram_r, NULL, NULL);
+		
+		cout << "max_histogram_l: " << max_histogram_l << "max_histogram_r: " << max_histogram_r << endl;
+		cout << "left_r: " << left_r << ", right_l: " << right_l << endl;
+
+		/// finding peaks and prefer peaks that do not have other peaks in between
+		int min_peak_dist = warp_col / 20;
+		float min_height_diff = (max_histogram_l + max_histogram_r)/4; // 5
+		float min_height = min_height_diff*2;
+		int mid_l = left_r, mid_r = right_l;
+		double max_histogram_m;
+		int max_histogram_m_idx;
+		int max_new_m = 0;
+		if (mid_l >= mid_r)
+		{
+			return;
+		}
+		vector<int> max_loc;
+		vector<float> max_val;
+		extractPeaks(histogram.colRange(mid_l, mid_r), min_peak_dist, min_height_diff, min_height, max_loc, max_val);
+		// minMaxIdx(histogram.colRange(mid_l, mid_r), NULL, &max_histogram_m, NULL, &max_histogram_m_idx);
+		float max_max_val_eva = 0, max_max_val = 0;
+		int max_max_loc = 0;
+		for (int i = 0; i < max_loc.size(); i++)
+		{
+			if (max_val[i]*sqrt(min(max_loc[i], mid_r - mid_l-1-max_loc[i])) > max_max_val_eva)
+			{
+				max_max_val = max_val[i];
+				max_max_loc = max_loc[i];
+			}
+		}
+		max_histogram_m = max_max_val;
+		max_histogram_m_idx = max_max_loc;
+		cout << "max_histogram_m: " << max_histogram_m << "max_histogram_m_idx: " << max_histogram_m_idx << endl;
+		if (max_histogram_m > min_height )
+		{
+			max_new_m = max_histogram_m_idx + mid_l;
+			__new_branch_found = true;
+			__split = false;
+			__split_recover_count = 0;
+			__branch_grow_count = 22;
+
+		}
+		if (__new_branch_found)
+		{
+			if ( abs(left_center - __last_left_fit[0]) < abs(right_center -__last_right_fit[0]) )
+			{
+				__rightx_base = max_new_m;
+				__leftx_base = 0;
+				hist_width = __rightx_base - left_center;
+				__branch_at_left = false;
+			}
+			else
+			{
+				__leftx_base = max_new_m;
+				__rightx_base = 0;
+				hist_width = right_center - __leftx_base;
+				__branch_at_left = true;
+			}
+		}
+		
+	}
+	else if ( __branch_grow_count > 0)
+	{
+		if (__branch_at_left)
+		{
+			__leftx_base = __last_left_fit[2]*warp_row*warp_row+__last_left_fit[1]*warp_row + __last_left_fit[0];
+			__rightx_base = 0;
+			float right_top = __last_right_fit[2]*warp_row *warp_row+__last_right_fit[1]*warp_row  + __last_right_fit[0];
+			hist_width = right_top - __leftx_base;
+		}
+		else
+		{
+			__rightx_base = __last_right_fit[2]*warp_row *warp_row+__last_right_fit[1]*warp_row  + __last_right_fit[0];
+			__leftx_base = 0;
+			float left_top = __last_left_fit[2]*warp_row *warp_row+__last_left_fit[1]*warp_row  + __last_left_fit[0];
+			hist_width = __rightx_base - left_top;
+		}
+	}
 	else
 	{
 		__leftx_base = 0;
@@ -811,6 +928,54 @@ void LaneImage::__ROIInds(int half_width, valarray<float>& nonzx, valarray<float
 			if (nonzx_cur_right.size() > __window_min_pixel)
 				rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
 		}
+	}
+	else if ( __branch_grow_count > 0) 
+	{
+		if (__leftx_base != 0) // left is new
+		{
+			/// find pixels in windows from bottom up
+			float leftx_cur = __leftx_base;
+			valarray<bool> good_left_inds;
+			for (int i = 0; i < __window_number - __branch_grow_count/3; i++)
+			{
+				float win_y_low = i*window_height;
+				float win_y_high = (i+1)*window_height;
+				float win_xleft_low = leftx_cur - half_width;
+				float win_xleft_high = leftx_cur + half_width;
+				good_left_inds = (nonzy >= win_y_low) & (nonzy <= win_y_high) & (nonzx >= win_xleft_low) & (nonzx <= win_xleft_high);
+				
+				left_lane_inds = left_lane_inds | good_left_inds;
+				
+				valarray<float> nonzx_cur_left(nonzx[good_left_inds]);
+				if (nonzx_cur_left.size() > __window_min_pixel)
+					leftx_cur = nonzx_cur_left.sum()/nonzx_cur_left.size();
+			}
+			right_lane_inds = (nonzx > (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] - half_width))
+			& (nonzx < (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] + half_width)); // formula's y is from downside	
+		}
+		else if (__rightx_base != 0)
+		{
+			/// find pixels in windows from bottom up
+			float rightx_cur = __rightx_base;
+			valarray<bool> good_right_inds;
+			for (int i = 0; i < __window_number - __branch_grow_count/3; i++)
+			{
+				float win_y_low = i*window_height;
+				float win_y_high = (i+1)*window_height;
+				float win_xright_low = rightx_cur - half_width;
+				float win_xright_high = rightx_cur + half_width;
+				good_right_inds = (nonzy >= win_y_low) & (nonzy <= win_y_high) & (nonzx >= win_xright_low) & (nonzx <= win_xright_high);
+				
+				right_lane_inds = right_lane_inds | good_right_inds;
+				
+				valarray<float> nonzx_cur_right(nonzx[good_right_inds]);
+				if (nonzx_cur_right.size() > __window_min_pixel)
+					rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
+			}
+			left_lane_inds = (nonzx > (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] - half_width))
+			& (nonzx < (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] + half_width));	
+		}
+		__branch_grow_count--;
 	}
 	else
 	{
