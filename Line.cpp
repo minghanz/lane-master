@@ -65,7 +65,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 			if (current_diff < 0.5*base_fluctuation || current_fit.size() == 1 || detected == false || split || new_branch_found || lane_mark.branch_grow_count > 0) //  && new_branch_found
 				w_current = 1;
 			else
-				w_current = 1; // 0.6
+				w_current = 0.6; // 0.6
 			if (current_fit.size() == 1)
 			{
 				best_fit = current_fit.back();
@@ -99,7 +99,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		}
 		else if (detected == true && current_diff < 0.5*base_fluctuation && check == true && van_consist  == true) // history is good and current one is good  (modified: check should betrue)
 		{
-			w_current = 1; // 0.3
+			w_current = 0.3; // 0.3
 			best_fit = (1 - w_current)*best_fit + w_current*current_fit.back();
 			fitRealWorldCurve();
 			//best_radius_of_curvature = w_history*best_radius_of_curvature + w_current*radius_of_curvature.back();
@@ -126,7 +126,7 @@ void Line::processNewRecord(VanPt& van_pt, LaneMark& lane_mark)
 		else if (detected == true && current_diff < 1*base_fluctuation && check == true && van_consist  == true) // history is soso(have fluctuation) and current one is good (modified: check should betrue)
 		{
 			// w_current *= 0.6;
-			w_current = 1;
+			w_current = 0.18;
 			best_fit = (1 - w_current)*best_fit + w_current*current_fit.back();
 			fitRealWorldCurve();
 			//best_radius_of_curvature = (1 - w_current)*best_radius_of_curvature + w_current*radius_of_curvature.back();

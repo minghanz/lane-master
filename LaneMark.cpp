@@ -26,6 +26,8 @@ LaneMark::LaneMark()
 	split_recover_count = 0;
 	branch_grow_count = 0;
 	branch_at_left = false;
+	k_pitch = 1e-10;
+	b_pitch = 1;
 }
 
 void LaneMark::recordImgFit(LaneImage& lane_find_image)
@@ -41,6 +43,8 @@ void LaneMark::recordImgFit(LaneImage& lane_find_image)
 	split_recover_count = lane_find_image.__split_recover_count;
 	branch_grow_count = lane_find_image.__branch_grow_count;
 	branch_at_left = lane_find_image.__branch_at_left;
+	k_pitch = lane_find_image.__k_pitch;
+	b_pitch = lane_find_image.__b_pitch;
 }
 
 void LaneMark::recordBestFit(Line& left_lane, Line& right_lane)

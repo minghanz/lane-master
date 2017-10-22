@@ -39,8 +39,15 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 	__right_fit = Vec3f(0, 0, 0);
 	__left_fit_cr = Vec3f(0, 0, 0);
 	__right_fit_cr = Vec3f(0, 0, 0);
-	__k_pitch = 0;
-	__b_pitch = 1;
+	__k_pitch = lane_mark.k_pitch/2;
+	__b_pitch = lane_mark.b_pitch;
+
+	float y0 = -__b_pitch/__k_pitch;	// record last frame's k and b for finding valid pixels, but decay to half
+	float y1 = 1/__k_pitch + y0;
+	y0 = 2*y0;
+	__k_pitch = -1/(y0-y1);
+	__b_pitch = y0/(y0-y1);
+
 	__split = lane_mark.split;
 	__new_branch_found = false;
 	__split_recover_count = lane_mark.split_recover_count;
@@ -630,6 +637,8 @@ void LaneImage::__laneBase(int& hist_width)
 		__split_recover_count = 0;
 		__branch_grow_count = 0;
 		__branch_at_left = false;
+		__k_pitch = 1e-10;
+		__b_pitch = 1;
 
 
 		/// histogram to find the base for fitting
@@ -802,6 +811,10 @@ void LaneImage::__laneBase(int& hist_width)
 		int left_r = min(warp_col, int(left_center + __window_half_width));
 		int right_l = max(0, int(right_center - __window_half_width));
 		int right_r = min(warp_col, int(right_center + __window_half_width));
+		if ( left_r < 0 || right_l >= warp_col)
+		{
+			return;
+		}
 		
 		minMaxIdx(histogram.colRange(left_l, left_r), NULL, &max_histogram_l, NULL, NULL);
 		minMaxIdx(histogram.colRange(right_l, right_r), NULL, &max_histogram_r, NULL, NULL);
@@ -864,6 +877,11 @@ void LaneImage::__laneBase(int& hist_width)
 				__branch_at_left = true;
 			}
 		}
+		else
+		{
+			__leftx_base = 0;
+			__rightx_base = 0;
+		}
 		
 	}
 	else if ( __branch_grow_count > 0)
@@ -871,15 +889,19 @@ void LaneImage::__laneBase(int& hist_width)
 		if (__branch_at_left)
 		{
 			__leftx_base = __last_left_fit[2]*warp_row*warp_row+__last_left_fit[1]*warp_row + __last_left_fit[0];
+			__leftx_base = (__leftx_base - warp_col/2)*(__k_pitch*warp_row + __b_pitch) + warp_col/2;
 			__rightx_base = 0;
 			float right_top = __last_right_fit[2]*warp_row *warp_row+__last_right_fit[1]*warp_row  + __last_right_fit[0];
+			right_top = (right_top - warp_col/2)*(__k_pitch*warp_row + __b_pitch) + warp_col/2;
 			hist_width = right_top - __leftx_base;
 		}
 		else
 		{
 			__rightx_base = __last_right_fit[2]*warp_row *warp_row+__last_right_fit[1]*warp_row  + __last_right_fit[0];
+			__rightx_base = (__rightx_base - warp_col/2)*(__k_pitch*warp_row + __b_pitch) + warp_col/2;
 			__leftx_base = 0;
 			float left_top = __last_left_fit[2]*warp_row *warp_row+__last_left_fit[1]*warp_row  + __last_left_fit[0];
+			left_top = (left_top - warp_col/2)*(__k_pitch*warp_row + __b_pitch) + warp_col/2;
 			hist_width = __rightx_base - left_top;
 		}
 	}
@@ -895,9 +917,11 @@ void LaneImage::__laneBase(int& hist_width)
 }
 
 
-void LaneImage::__ROIInds(int half_width, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds )
+void LaneImage::__ROIInds(float half_width, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds )
 {
 	float frow = (float)warp_row;
+	float fcol = (float)warp_col;
+	
 	float window_height = warp_row/__window_number;
 	if ( __initial_frame )	// originally only left
 	{
@@ -950,8 +974,10 @@ void LaneImage::__ROIInds(int half_width, valarray<float>& nonzx, valarray<float
 				if (nonzx_cur_left.size() > __window_min_pixel)
 					leftx_cur = nonzx_cur_left.sum()/nonzx_cur_left.size();
 			}
-			right_lane_inds = (nonzx > (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] - half_width))
-			& (nonzx < (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] + half_width)); // formula's y is from downside	
+			valarray<float> right_ref = __last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0];
+			right_ref = (right_ref - fcol/2)*(__k_pitch*(frow - 1 - nonzy) + __b_pitch) + fcol/2;
+			right_lane_inds = (nonzx > (right_ref - half_width))
+			& (nonzx < (right_ref + half_width)); // formula's y is from downside	
 		}
 		else if (__rightx_base != 0)
 		{
@@ -972,18 +998,32 @@ void LaneImage::__ROIInds(int half_width, valarray<float>& nonzx, valarray<float
 				if (nonzx_cur_right.size() > __window_min_pixel)
 					rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
 			}
-			left_lane_inds = (nonzx > (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] - half_width))
-			& (nonzx < (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] + half_width));	
+			valarray<float> left_ref = __last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0];
+			left_ref = (left_ref - fcol/2)*(__k_pitch*(frow - 1 - nonzy) + __b_pitch) + fcol/2;
+			left_lane_inds = (nonzx > (left_ref - half_width))
+			& (nonzx < (left_ref + half_width)); // formula's y is from downside	
+			// left_lane_inds = (nonzx > (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] - half_width))
+			// & (nonzx < (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] + half_width));	
 		}
 		__branch_grow_count--;
 	}
 	else
 	{
-		
-		left_lane_inds = (nonzx > (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] - half_width))
-		& (nonzx < (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] + half_width));
-		right_lane_inds = (nonzx > (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] - half_width))
-		& (nonzx < (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] + half_width)); // formula's y is from downside
+		valarray<float> left_ref = __last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0];
+		left_ref = (left_ref - fcol/2)*(__k_pitch*(frow - 1 - nonzy) + __b_pitch) + fcol/2;
+		left_lane_inds = (nonzx > (left_ref - half_width))
+		& (nonzx < (left_ref + half_width)); // formula's y is from downside // consider pitch compensation
+
+		valarray<float> right_ref = __last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0];
+		right_ref = (right_ref - fcol/2)*(__k_pitch*(frow - 1 - nonzy) + __b_pitch) + fcol/2;
+		right_lane_inds = (nonzx > (right_ref - half_width))
+		& (nonzx < (right_ref + half_width)); // formula's y is from downside // consider pitch compensation
+
+		// // originally not considering pitch compen, commented at 10/22/2017
+		// left_lane_inds = (nonzx > (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] - half_width))
+		// & (nonzx < (__last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0] + half_width));
+		// right_lane_inds = (nonzx > (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] - half_width))
+		// & (nonzx < (__last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0] + half_width)); // formula's y is from downside
 		
 		/*
 		left_lane_inds = (nonzx > (__avg_hist_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__avg_hist_left_fit[1]*(frow - 1 - nonzy) + __avg_hist_left_fit[0] - half_width))

@@ -48,7 +48,7 @@ class LaneImage
 
 	void __calibration();
 	void __laneBase(int& hist_width);
-	void __ROIInds(int half_width, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds );
+	void __ROIInds(float half_width, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds );
 	// void __reshapeSub(int half_width, const Mat& warp_reshape, const Mat& warp_reshape_HLS, Mat& warp_reshape_sub, Mat& warp_reshape_sub_HLS, vector<Point>& sub_pts  );
 
 	void __imageFilter();

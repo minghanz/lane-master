@@ -306,7 +306,7 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			#ifdef DRAW
 			line(vote_lines_img, Point(xl1,yl1), Point(xl2, yl2), Scalar(0,0,255),1);
 			line(vote_lines_img, Point(xr1,yr1), Point(xr2, yr2), Scalar(0,0,255),1);
-			circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1);
+			// circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1); // it makes the image not clean
 			#endif
 			line(valid_lines_map, Point(xl1,yl1), Point(xl2, yl2), Scalar(255),1);
 		}

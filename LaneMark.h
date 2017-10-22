@@ -58,7 +58,7 @@ public:
 	int split_recover_count;
 	int branch_grow_count;
 	bool branch_at_left;
-
+	float k_pitch, b_pitch;
 public:
 	LaneMark();
 	void recordImgFit(LaneImage& lane_find_image);

@@ -342,25 +342,34 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 		/// start robust regression
 		
 		Mat regularizer(4,4,CV_32FC1, Scalar(0));
-		regularizer.at<float>(2,2) = 1000*min(max(lefty.min(), (warp_row - lefty.max()) ), max(righty.min() , (warp_row - righty.max()) ) );
+		regularizer.at<float>(2,2) = 1000*pow((max(lefty.min(), (warp_row -1 - lefty.max()) ) + max(righty.min() , (warp_row -1 - righty.max()) ) )/2, 2);
+		#ifndef NDEBUG_FT
 		cout << "regularizer: " << regularizer.at<float>(2,2)  << endl;
-
+		#endif
 		Mat regularizer_left(3,3,CV_32FC1, Scalar(0));		
 		Mat regularizer_right(3,3,CV_32FC1, Scalar(0));
-		regularizer_left.at<float>(2,2) = 1000*max(lefty.min() , (warp_row - lefty.max()) );
-		regularizer_right.at<float>(2,2) = 1000*max(righty.min() , (warp_row - righty.max()) );
+		regularizer_left.at<float>(2,2) = 1000*pow(max(lefty.min() , (warp_row -1 - lefty.max()) ), 2);
+		regularizer_right.at<float>(2,2) = 1000*pow(max(righty.min() , (warp_row -1 - righty.max()) ), 2);
+		#ifndef NDEBUG_FT
 		cout << "regularizer left and right: " << regularizer_left.at<float>(2,2) << " " << regularizer_right.at<float>(2,2) << endl;
+		#endif
 
 		Mat regularizer_warp(2,2, CV_32FC1, Scalar(0));
 		regularizer_warp.at<float>(0,0) = 10*pow(max(warp_row - lefty.max(), warp_row - righty.max()), 4);
+		#ifndef NDEBUG_FT
 		cout << "regularizer_warp: " << regularizer_warp.at<float>(0,0)  << endl;
+		#endif
 
 		if (iteration_subsample != iteration_subsample_num - 1)
 		{
 			/// initial fit seperately
-			left_fit = (Y_lane(Range(0, 3), Range(0, length_left)).t()).inv(DECOMP_SVD)*(X_lane.colRange(0, length_left).t());
-			right_fit = (Y_lane(Range(0, 3), Range(length_left, length_left + length_right)).t()).inv(DECOMP_SVD)*(X_lane.colRange(length_left, length_left + length_right).t());
-			
+			// left_fit = (Y_lane(Range(0, 3), Range(0, length_left)).t()).inv(DECOMP_SVD)*(X_lane.colRange(0, length_left).t());
+			// right_fit = (Y_lane(Range(0, 3), Range(length_left, length_left + length_right)).t()).inv(DECOMP_SVD)*(X_lane.colRange(length_left, length_left + length_right).t());
+			left_fit = (Y_lane(Range(0, 3), Range(0, length_left))*Y_lane(Range(0, 3), Range(0, length_left)).t() + regularizer_left).inv()
+			*Y_lane(Range(0, 3), Range(0, length_left))*(X_lane.colRange(0, length_left).t());
+			right_fit = (Y_lane(Range(0, 3), Range(length_left, length_left + length_right))*Y_lane(Range(0, 3), Range(length_left, length_left + length_right)).t() + regularizer_right).inv()
+			*Y_lane(Range(0, 3), Range(length_left, length_left + length_right))*(X_lane.colRange(length_left, length_left + length_right).t());
+
 			#ifdef DRAW
 			// draw the current lane shape
 			{
@@ -400,7 +409,8 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 				- left_fit.at<float>(2)*Y_lane(Range(2,3), Range(length_left, length_left+length_right)) - left_fit.at<float>(1)*Y_lane(Range(1,2), Range(length_left, length_left+length_right)) - left_fit.at<float>(0))).t() + 0.1;
 			
 			Mat w_verti_pos;
-			w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+			// w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+			sqrt((frow - Y_lane.row(1)).t()*0.1, w_verti_pos);
 			res_lane = 1/res_lane.mul(w_verti_pos); //(frow - 1 - Y_left.row(1))large for downside
 			Mat w_lane(res_lane.rows, 4, CV_32F); 
 			w_lane.col(0) = res_lane.col(0).mul(W_lane.t());
@@ -435,11 +445,20 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 				k_pitch = k_mat.at<float>(0,0);
 				b_pitch = k_mat.at<float>(0,1);
 
+				if (iteration != iteration_num - 1)
+				{
+					float y0 = -b_pitch / k_pitch;
+					float y1 = warp_row/5;
+					k_pitch = -1/(y0 - y1);
+					b_pitch = y0/(y0 - y1);
+				}
+
 				Mat X_lane_f = (X_lane - warp_col/2)/(k_pitch*Y_lane.row(1) + b_pitch) + warp_col/2;
 				res_lane = (abs(X_lane_f - Y_lane_f)).t() + 0.1;
 
 				Mat w_verti_pos;
-				w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+				// w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+				sqrt((frow - Y_lane.row(1)).t()*0.1, w_verti_pos);
 				res_lane = 1/res_lane.mul(w_verti_pos); //(frow - 1 - Y_left.row(1))large for downside
 				w_lane = Mat(res_lane.rows, 4, CV_32F);
 				w_lane.col(0) = res_lane.col(0).mul(W_lane.t());
@@ -451,24 +470,37 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 			}
 			__k_pitch = k_pitch;
 			__b_pitch = b_pitch;
+			#ifndef NDEBUG_FT
 			cout << "k_pitch: " << __k_pitch << ", y0: " << int(-__b_pitch/__k_pitch) << endl;
 			cout << "b_pitch: " << __b_pitch << ", y1: " << int(1/__k_pitch -__b_pitch/__k_pitch ) << endl;
+			#endif
 
 			#ifdef DRAW
 			// draw the current lane shape
 			{
 				vector<Point> plot_warp_left, plot_warp_right;
+				vector<Point> plot_warp_left_comp, plot_warp_right_comp;
+				
 				for (int i = 0; i < warp_row; i+= 10)
 				{
 					float y_cur = warp_row - i;
-					float x_cur_left = (lane_fit.at<float>(0) + lane_fit.at<float>(1)*y_cur + lane_fit.at<float>(2)*y_cur*y_cur - lane_fit.at<float>(3) - warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
-					float x_cur_right = (lane_fit.at<float>(0) + lane_fit.at<float>(1)*y_cur + lane_fit.at<float>(2)*y_cur*y_cur + lane_fit.at<float>(3) - warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
+					float x_cur_left_comp = lane_fit.at<float>(0) + lane_fit.at<float>(1)*y_cur + lane_fit.at<float>(2)*y_cur*y_cur - lane_fit.at<float>(3);
+					float x_cur_right_comp = lane_fit.at<float>(0) + lane_fit.at<float>(1)*y_cur + lane_fit.at<float>(2)*y_cur*y_cur + lane_fit.at<float>(3);
+					plot_warp_left_comp.push_back(Point(x_cur_left_comp, i));
+					plot_warp_right_comp.push_back(Point(x_cur_right_comp, i));
+					float x_cur_left = (x_cur_left_comp - warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
+					float x_cur_right = (x_cur_right_comp - warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
 					plot_warp_left.push_back(Point(x_cur_left, i));
 					plot_warp_right.push_back(Point(x_cur_right, i));
+					
 				}
-				vector<vector<Point> >  plot_pts_lr_warp;
+				vector<vector<Point> >  plot_pts_lr_warp, plot_pts_lr_warp_comp;
+				plot_pts_lr_warp_comp.push_back(plot_warp_left_comp);
+				plot_pts_lr_warp_comp.push_back(plot_warp_right_comp);
+
 				plot_pts_lr_warp.push_back(plot_warp_left);
 				plot_pts_lr_warp.push_back(plot_warp_right);
+
 				Mat inishow_lane_window;
 				__lane_window_out_img.copyTo(inishow_lane_window);
 	
@@ -481,6 +513,8 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 					inishow_lane_window.at<Vec3b>(righty[i], rightx[i]) = Vec3b(0, 0, 150);
 				}
 				polylines(inishow_lane_window, plot_pts_lr_warp, false, Scalar(0, 255, 0), 1, LINE_4 );
+				polylines(inishow_lane_window, plot_pts_lr_warp_comp, false, Scalar(0, 150, 0), 1, LINE_4 );
+				
 				imshow("ini_unionfit" + x2str(iteration_subsample), inishow_lane_window);
 			}
 			#endif
@@ -516,8 +550,11 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 
 				if (__k_pitch > 0.001)
 				{
-					__split = true;
 					__split_recover_count = min(__split_recover_count+1, 10);
+					if (__split_recover_count >= 5)
+					{
+						__split = true;
+					}
 				}
 				else if (__k_pitch < 0.0001)
 				{
@@ -533,10 +570,16 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 		}
 		else
 		{
+			#ifndef NDEBUG_FT
 			cout << "split: " << __split << endl;
 			cout << "new_branch_found: " << __new_branch_found << endl;
+			#endif
+
 			if (__split)
 			{
+				__k_pitch = 1e-10;	// if considered splitting, then the estimated k and b are fake, thus set to zero. 
+				__b_pitch = 1;
+
 				// left_fit = (Y_lane(Range(0, 3), Range(0, length_left)).t()).inv(DECOMP_SVD)*(X_lane.colRange(0, length_left).t());
 				// right_fit = (Y_lane(Range(0, 3), Range(length_left, length_left + length_right)).t()).inv(DECOMP_SVD)*(X_lane.colRange(length_left, length_left + length_right).t());
 				
@@ -594,7 +637,8 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 					Mat res_lane = (abs(X_lane_f - lane_fit.at<float>(2)*Y_lane.row(2) - lane_fit.at<float>(1)*Y_lane.row(1) - lane_fit.at<float>(0) - lane_fit.at<float>(3)*Y_lane.row(3))).t() + 0.1;
 					
 					Mat w_verti_pos;
-					w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+					// w_verti_pos = (frow - 1 - Y_lane.row(1)).t() * 0.01 + 1;	// 1~5
+					sqrt((frow - Y_lane.row(1)).t()*0.1, w_verti_pos);
 					// sqrt((frow - 1 - Y_lane.row(1)).t(), w_verti_pos);		// 0~20
 					// log((frow - 1 - Y_lane.row(1)).t(), w_verti_pos);
 					res_lane = 1/res_lane.mul(w_verti_pos); //(frow - 1 - Y_left.row(1))large for downside
@@ -615,6 +659,10 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)
 				__lefty = lefty;
 				__rightx = rightx;
 				__righty = righty;
+				#ifndef NDEBUG_FT
+				cout << "left fit: " << __left_fit[2] << " " << __left_fit[1] << " " << __left_fit[0] << endl;
+				cout << "right fit: " << __right_fit[2] << " " << __right_fit[1] << " " << __right_fit[0] << endl;
+				#endif
 
 				#ifdef DRAW
 				// draw the current lane shape
