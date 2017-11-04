@@ -2327,6 +2327,23 @@ void LaneImage::__fitLaneMovingWindow(int& hist_width, bool& last_all_white)		//
 			__rightx = rightx;
 			__righty = righty;
 			
+			#ifdef DRAW
+			// draw the current lane shape
+			vector<Point> plot_warp_left, plot_warp_right;
+			for (int i = 0; i < warp_row; i+= 10)
+			{
+				float y_cur = warp_row - i;
+				float x_cur_left = (__left_fit(0) + __left_fit(1)*y_cur + __left_fit(2)*y_cur*y_cur - warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
+				float x_cur_right = (__right_fit(0) + __right_fit(1)*y_cur + __right_fit(2)*y_cur*y_cur- warp_col/2)*(__k_pitch*y_cur + __b_pitch) + warp_col/2;
+				plot_warp_left.push_back(Point(x_cur_left, i));
+				plot_warp_right.push_back(Point(x_cur_right, i));
+			}
+			__plot_pts_lr_warp.clear();
+			__plot_pts_lr_warp.push_back(plot_warp_left);
+			__plot_pts_lr_warp.push_back(plot_warp_right);
+			polylines(__lane_window_out_img, __plot_pts_lr_warp, false, Scalar(0, 255, 0), 1, LINE_4 );
+			#endif
+
 			/// also train a linear model
 			Mat Y_lane_lin(3, Y_lane.cols, CV_32F);
 			Y_lane_lin.rowRange(0,2) = Y_lane.rowRange(0, 2) + 0;

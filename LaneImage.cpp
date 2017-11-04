@@ -39,7 +39,7 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 	__right_fit = Vec3f(0, 0, 0);
 	__left_fit_cr = Vec3f(0, 0, 0);
 	__right_fit_cr = Vec3f(0, 0, 0);
-	__k_pitch = lane_mark.k_pitch/2;
+	__k_pitch = lane_mark.k_pitch;
 	__b_pitch = lane_mark.b_pitch;
 
 	float y0 = -__b_pitch/__k_pitch;	// record last frame's k and b for finding valid pixels, but decay to half

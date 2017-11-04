@@ -37,8 +37,8 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
 
 	#else
-	van_pt_ini = Point2f(img_size.width/2, img_size.height/2);
-	van_pt_cali = van_pt_ini;
+	van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye
+	van_pt_cali = van_pt_ini; 
 	theta_w = 0; 	// yaw angle 
 	theta_h = 0;	// pitch angle
 	#endif
@@ -77,8 +77,8 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	valid_lines_map = Mat(img_size, CV_32FC1, Scalar(0));
 
 	#ifdef CANNY_VOTE
-	max_weight_left = 0;
-	max_weight_right = 0;
+	max_weight_left = 3;
+	max_weight_right = 3;
 	confidence = 0;
 	conf_weight = 0;
 	conf_mse = 0;
@@ -311,6 +311,13 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			line(valid_lines_map, Point(xl1,yl1), Point(xl2, yl2), Scalar(255),1);
 		}
 	}
+
+	if (x_sum == 0 || y_sum == 0 || weight_sum == 0)
+	{
+		cout << "Initilization failed: weight = 0. " << endl;
+		return false;
+	}
+
 	// Point2f van_pt_obsv;
 	van_pt_obsv.x = x_sum/weight_sum;
 	van_pt_obsv.y = y_sum/weight_sum;
@@ -373,7 +380,7 @@ int VanPt::checkValidLine(Vec4i line)
 	float y_m = (y1+y2)/2 - ref_pt.y;
 	int side = x_m*nx + y_m*ny > 0 ? 2 : 1; // right:2, left:1
 
-	bool valid_side = (side == 1 && k < 0 ) || (side == 2 && k > 0);
+	bool valid_side = ( (side == 1 && k < 0 ) || (side == 2 && k > 0) ) && y_bottom > ref_pt.y; // 10/30 added vertical constraints, but have risk if ref_pt is not reasonable
 	bool valid_length = length >= length_thre_cur;
 	bool valid_angle = abs(k) >= k_thre_min_cur && abs(k) <= k_thre_max_cur;
 	bool valid = valid_side && valid_length && valid_angle ; //   // && y_bottom - ref_pt.y >= dist_top_thre
@@ -418,7 +425,7 @@ float VanPt::getLineWeight(Vec4i line)
 	// circle(vote_lines_img, Point(ref_pt), (int)c_dist + (int)(1/gamma_dist), Scalar(255,0,0));
 	#endif
 
-	float weight = length/(y_bottom_warp_max-ref_pt.y)*max((float)0,y_bottom - ref_pt.y)/(y_bottom_warp_max - ref_pt.y)*dist_weight;
+	float weight = length/(y_bottom_warp_max-ref_pt.y)*(y_bottom - ref_pt.y)/(y_bottom_warp_max - ref_pt.y)*dist_weight;
 
 	return weight;
 }
@@ -478,7 +485,9 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	}
 	float van_pt_mse = sqrt(van_pt_error_sum / (van_pt_weight_sum+0.00001));
 	float gamma_e = conf_gamma_e, c_e = conf_c_e; // gamma_e = 1.0/20.0, c_e = 30;
+
 	conf_mse = 0.5*(1-tanh(gamma_e*(van_pt_mse - c_e)));
+
 
 	// conf_dist
 	float c_x = conf_c_x;
@@ -497,22 +506,23 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	}
 
 	#ifdef DRAW
-	circle(vote_lines_img, Point(van_pt_obsv), (int)van_pt_mse, Scalar(0,0,255));
+	circle(vote_lines_img, Point(van_pt_obsv), max(0, (int)van_pt_mse), Scalar(0,0,255));
 	circle(vote_lines_img, Point(van_pt_obsv), 5, Scalar(0,0,255), -1);
 	rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0));
+	cout << "first draw finished. " << endl;
 	#endif
 
-	// int fontFace = FONT_HERSHEY_SIMPLEX;
-	// double fontScale = 0.5;
-	// int thickness = 1;
-	// string Text1 = "conf_w: " + x2str(conf_weight) + ", conf_mse: " + x2str(conf_mse) + ", conf_dist: " + x2str(conf_dist);
-	// string Text2 = "conf_cur: " + x2str(cur_confidence) + ", conf: " + x2str(filter_confidence);
-	// string Text3 = "w: (" + x2str(weight_left) + ", " + x2str(weight_right) + "), w_max: (" + x2str(max_weight_left) + ", " + x2str(max_weight_right) + ")";
-	// string Text4 = "van_pt_obsv: (" + x2str((int)van_pt_obsv.x) + ", " + x2str((int)van_pt_obsv.y) + ")";
-	// putText(vote_lines_img, Text1, Point(10, 80), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
-	// putText(vote_lines_img, Text2, Point(10, 100), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
-	// putText(vote_lines_img, Text3, Point(10, 120), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
-	// putText(vote_lines_img, Text4, Point(270, 60), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	int fontFace = FONT_HERSHEY_SIMPLEX;
+	double fontScale = 0.5;
+	int thickness = 1;
+	string Text1 = "conf_w: " + x2str(conf_weight) + ", conf_mse: " + x2str(conf_mse) + ", conf_dist: " + x2str(conf_dist);
+	string Text2 = "conf_cur: " + x2str(cur_confidence) + ", conf: " + x2str(filter_confidence);
+	string Text3 = "w: (" + x2str(weight_left) + ", " + x2str(weight_right) + "), w_max: (" + x2str(max_weight_left) + ", " + x2str(max_weight_right) + ")";
+	string Text4 = "van_pt_obsv: (" + x2str((int)van_pt_obsv.x) + ", " + x2str((int)van_pt_obsv.y) + ")";
+	putText(vote_lines_img, Text1, Point(10, 80), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	putText(vote_lines_img, Text2, Point(10, 100), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	putText(vote_lines_img, Text3, Point(10, 120), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
+	putText(vote_lines_img, Text4, Point(270, 60), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 
 
 	return filter_confidence;
@@ -538,9 +548,11 @@ void VanPt::updateFlags()
 		first_sucs = false;
 
 		fail_ini_count = min(10, fail_ini_count + 1);
+		confidence *= 0.5;
 		if (fail_ini_count >= 5)
 		{
 			ini_flag = false;
+			confidence = 0;
 		}
 	}
 }
