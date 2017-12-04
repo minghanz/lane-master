@@ -4,6 +4,8 @@
 #include "VanPt.h"
 #include "LaneMark.h"
 #include "LearnModel.h"
+#include "VehMask.h"
+#include "KeyPts.h"
 
 using namespace std;
 using namespace cv;
@@ -24,7 +26,7 @@ int warp_row = 400;	// 500
 //// LaneImage::LaneImage (Mat& per_mtx, Mat& inv_per_mtx, Mat& image, float nframe, int samp_cyc, int ini_flag, int& hist_width, bool first_sucs, int window_half_width, Mat& BGR_sample, Mat& HLS_sample, Mat& BGR_resp, Mat& HLS_resp, 
 //// 	Vec3f left_fit, Vec3f right_fit, Vec3f avg_hist_left_fit, Vec3f avg_hist_right_fit, vector<int> chnl_thresh, Ptr<ml::LogisticRegression> BGR_regg, Ptr<ml::LogisticRegression> HLS_regg, Mat dist_coeff, Mat cam_mtx )
 //// #endif
-LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, float nframe)
+LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, VehMask& veh_masker, KeyPts& key_pts, float nframe)
 {
 	// __raw_image = image;
 	// __row = image.rows;
@@ -195,15 +197,19 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 		
 		//__filter_binary = Mat::ones(__row, __col, CV_32F);
 		__warped_filter_image = Mat::ones(warp_row, warp_col, CV_32F);
-		__imageFilter();
+		__imageFilter( veh_masker.warp_veh_mask );
+
+		// __findKeyPt( veh_masker ); // based on built-in API of feature point extraction
 		
 		clock_t t_now = clock();
 		cout << "Image filtered, using " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
 		t_last = t_now;
 		
 		__lane_window_out_img = Mat(warp_row, warp_col, CV_8UC3, Scalar(0, 0, 0));
-		__fitLaneMovingWindow(lane_mark.hist_width, lane_mark.last_all_white);
+		__fitLaneMovingWindow(lane_mark.hist_width, lane_mark.last_all_white, veh_masker);
 		
+		__findKeyCustom(veh_masker, key_pts);
+
 		t_now = clock();
 		cout << "Image fitted, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
 		t_last = t_now;
@@ -253,7 +259,178 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 // 	return;
 // }
 
-void LaneImage::__imageFilter()
+void LaneImage::__findKeyCustom(VehMask& veh_masker, KeyPts& key_pts)
+{
+	if ( __left_fit!= Vec3f(0, 0, 0) && __right_fit != Vec3f(0, 0, 0) )
+	{
+		Mat lane_window_out_r(warp_row, warp_col, CV_8UC1);
+		Mat lane_window_out_l(warp_row, warp_col, CV_8UC1);
+		Mat out[] = {lane_window_out_r, lane_window_out_l};
+		int from_to[] = {2, 0, 0, 1};
+		mixChannels(&__lane_window_out_img, 1, out, 2, from_to, 2);
+
+		Mat lane_out_img_copy;
+		__lane_window_out_img.copyTo(lane_out_img_copy);
+
+		cout << "entering key custom" << endl;
+
+
+		vector<Point> key_left_2p, key_left_2n;
+		selectPt(lane_window_out_l, lane_out_img_copy, __plot_pts_lr_warp[0], key_left_2p, key_left_2n);
+		cout << "finish key custom 1 " << endl;
+
+		vector<Point> key_right_2p, key_right_2n;
+		selectPt(lane_window_out_r, lane_out_img_copy, __plot_pts_lr_warp[1], key_right_2p, key_right_2n);
+		cout << "finish key custom 2 " << endl;
+
+		key_pts.renew( key_left_2p, key_left_2n, key_right_2p, key_right_2n);
+
+		imshow("key_custom", lane_out_img_copy);
+		
+	}
+}
+void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot_pts_warp, vector<Point>& key_2p, vector<Point>& key_2n)
+{
+	int up_thresh = 4, low_thresh = 1, dist_thresh = 10;
+	vector<int> near_nonznum(plot_pts_warp.size(), 0);
+
+	if (plot_pts_warp[0].x >= 0 && plot_pts_warp[0].x < warp_col )
+		near_nonznum[0] = countNonZero(lane_window_side(Range(plot_pts_warp[0].y, plot_pts_warp[0].y + 1), Range(max(plot_pts_warp[0].x - 5, 0), min(plot_pts_warp[0].x + 5, warp_col))));
+
+	cout << "near_nonznum init" << endl;
+	
+	Point cache_point(0, 0);
+	float cache_ctnonz = 0;
+	// bool cur_p = lane_window_side.at<uchar>(plot_pts_warp[0][0]) > 0;
+	bool cur_p = near_nonznum[0] >= up_thresh;
+	for (int i = 1; i < plot_pts_warp.size(); i++)
+	{
+		if (plot_pts_warp[i].x >= 0 && plot_pts_warp[i].x < warp_col )
+			near_nonznum[i] = countNonZero(lane_window_side(Range(plot_pts_warp[i].y, plot_pts_warp[i].y + 1), Range(max(plot_pts_warp[i].x - 5, 0), min(plot_pts_warp[i].x + 5, warp_col))));
+
+		cache_ctnonz += near_nonznum[i];
+
+		if ( !cur_p && near_nonznum[i] >= up_thresh) // (!cur_p || key_2n.size() + key_2p.size() == 0) // lane_window_side.at<uchar>(plot_pts_warp[i]) > 0
+		{
+			bool dist_ok = true;
+			// if (key_2n.size() > 0 && plot_pts_warp[i].y - key_2n.back().y < dist_thresh)
+			// {
+			// 	dist_ok = false;
+			// }
+			if (cache_point.y != 0 && plot_pts_warp[i].y - cache_point.y < dist_thresh)
+			{
+				dist_ok = false;
+			}
+			
+			if (dist_ok)
+			{
+				if (cache_point.y != 0)
+				{
+					if (cache_ctnonz/(plot_pts_warp[i].y-cache_point.y) < up_thresh) // up_thresh
+					{
+						key_2n.push_back(cache_point);
+						cache_point = plot_pts_warp[i];
+						cache_ctnonz = 0;
+						circle(lane_out_img_copy, key_2n.back(), 3, Scalar(0, 255, 0), -1);
+						cur_p = true;
+					}
+					else
+					{
+						i = cache_point.y;
+						cache_point = Point(0,0);
+						cur_p = true;
+					}
+				}
+				else
+				{
+					cache_point = plot_pts_warp[i];
+					cache_ctnonz = 0;
+					cur_p = true;
+				}
+			}
+			// key_2p.push_back(plot_pts_warp[i]);
+			// circle(lane_out_img_copy, key_2p.back(), 3, Scalar(0, 255, 0), 1);
+			// cur_p = true;
+		}
+		else if (cur_p && near_nonznum[i] <= low_thresh) // (cur_p || key_2n.size() + key_2p.size() == 0) // lane_window_side.at<uchar>(plot_pts_warp[i]) == 0
+		{
+			bool dist_ok = true;
+			// if (key_2p.size() > 0 && plot_pts_warp[i].y - key_2p.back().y < dist_thresh)
+			// {
+			// 	dist_ok = false;
+			// }
+			if (cache_point.y != 0 && plot_pts_warp[i].y - cache_point.y < dist_thresh)
+			{
+				dist_ok = false;
+			}
+			
+			if (dist_ok)
+			{
+				if (cache_point.y != 0)
+				{
+					if (cache_ctnonz/(plot_pts_warp[i].y-cache_point.y) > low_thresh) // low_thresh
+					{
+						key_2p.push_back(cache_point);
+						cache_point = plot_pts_warp[i];
+						cache_ctnonz = 0;
+						circle(lane_out_img_copy, key_2p.back(), 3, Scalar(0, 255, 0), 1);
+						cur_p = false;
+					}
+					else
+					{
+						i = cache_point.y;
+						cache_point = Point(0,0);
+						cur_p = false;
+					}
+				}
+				else
+				{
+					cache_point = plot_pts_warp[i];
+					cache_ctnonz = 0;
+					cur_p = false;
+				}
+			}
+			// if (dist_ok)
+			// {
+			// 	key_2n.push_back(plot_pts_warp[i]);
+			// 	circle(lane_out_img_copy, key_2n.back(), 3, Scalar(0, 255, 0), 1);
+			// 	cur_p = false;
+			// }
+		}
+	}
+	if ( !cur_p && cache_point != Point(0, 0) )
+	{
+		key_2n.push_back(cache_point);
+		circle(lane_out_img_copy, key_2n.back(), 3, Scalar(0, 255, 0), -1);
+	}
+}
+
+void LaneImage::__findKeyPt( VehMask& veh_masker )
+{
+	// xfeatures2d:: SIFT SURF BriefDescriptorExtractor
+	// Ptr<xfeatures2d::FastFeatureDetector> sift_detector = xfeatures2d::FastFeatureDetector::create();
+	//  FastFeatureDetector AgastFeatureDetector GFTTDetector SimpleBlobDetector AKAZE* BRISK*(slow) KAZE* (MSER) ORB*
+	Ptr<ORB> sift_detector = ORB::create();
+	vector<KeyPoint> keypoints;
+	Mat descriptors;
+
+	Mat out_image;
+	sift_detector->detectAndCompute(__warped_raw_image, ~veh_masker.warp_veh_mask, keypoints, descriptors, false );
+	// sift_detector->detect(__warped_raw_image, keypoints, ~warp_veh_mask);
+	drawKeypoints( __warped_raw_image, keypoints, out_image, Scalar::all(-1), DrawMatchesFlags::DEFAULT );
+
+	if (veh_masker.valid_detc.size() >= 1)
+    {
+        vector<Mat> channels;
+        split(out_image, channels);
+        channels[2] = veh_masker.warp_veh_mask + channels[2] + 0;
+        merge(channels, out_image);
+    }
+	imshow("keypoint", out_image);
+	// waitKey(0);
+}
+
+void LaneImage::__imageFilter(Mat& warp_veh_mask)
 {
 	/// filter the warped image
 	Mat gray;
@@ -550,6 +727,9 @@ void LaneImage::__imageFilter()
 	minMaxLoc(binary_output_final, NULL, &max_val, NULL, NULL);
 	binary_output_final = binary_output_final*(1/max_val);
 	threshold(binary_output_final, __warped_filter_image, 0.4, 1, THRESH_TOZERO); // filter out the lowest possibility
+
+	__warped_filter_image.setTo(0, warp_veh_mask );
+
 	
 	#ifndef NDEBUG
 	imshow("overall binary", __warped_filter_image);
@@ -1035,7 +1215,7 @@ void LaneImage::__ROIInds(float half_width, valarray<float>& nonzx, valarray<flo
 	return;
 }
 
-void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty)
+void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty, VehMask& veh_masker)
 {
 	Mat filter_binary_half(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0)); // store only one-side-edge
 	if (left)
@@ -1045,6 +1225,8 @@ void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Poi
 	
 	__sobelx.setTo(0, ~filter_binary_half); // __sobelx is the original sobelx before this step
 	
+	__sobelx.setTo(0, veh_masker.warp_veh_mask);
+
 	Mat abs_sobelx = abs(__sobelx);
 	
 	Mat sobel_xtop(warp_row, warp_col, CV_32FC1, Scalar(0));
@@ -1056,6 +1238,8 @@ void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Poi
 	sobelAbsThresh(sobel_xtop, filter_binary_x_top, __abs_x_thresh);
 	sobelAbsThresh(sobel_xbot, filter_binary_x_bot, __abs_x_thresh);
 	__warped_filter_image.setTo(0.5, filter_binary_x_top | filter_binary_x_bot);
+
+	// __warped_filter_image.setTo(0, veh_masker.warp_veh_mask);
 	
 	#ifndef NDEBUG
 	imshow("overall binary make-up", __warped_filter_image);

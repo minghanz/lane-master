@@ -3,6 +3,8 @@
 #include "VanPt.h"
 #include "LaneMark.h"
 #include "LearnModel.h"
+#include "VehMask.h"
+#include "KeyPts.h"
 
 #include "macro_define.h"
 
@@ -72,6 +74,12 @@ int main(int argc, char** argv)
 	VanPt van_pt(alpha_w, alpha_h);
     LaneMark lane_mark;
 	LearnModel learn_model;
+	VehMask veh_masker;
+	KeyPts key_pts;
+	// HOGDescriptor hog(Size(50,60), Size(10,10), Size(20,20), Size(10,10), 9, 1 );
+    // string obj_det_filename = "my_detector.yml";
+	// hog.load( obj_det_filename );
+
 
 	float illu_comp = 1;
 	// int nframe = msc[0];
@@ -146,7 +154,34 @@ int main(int argc, char** argv)
 			t_last = t_now;
 
 
-			LaneImage lane_find_image(warped_img, van_pt, lane_mark, learn_model, time_step);
+			Mat subimg;
+			cali_image.rowRange(cali_image.rows / 2, cali_image.rows).copyTo(subimg);
+
+			veh_masker.detectHOG(subimg, van_pt.per_mtx, van_pt.inv_per_mtx);
+			// vector< Rect > detections;
+			// vector< double > foundWeights;
+			// vector<Rect> veh_rect;
+			// // Mat veh_mask(img_size, CV_8UC1, Scalar(0));
+
+			// // Mat subimg;
+			// // cali_image.rowRange(cali_image.rows/2, cali_image.rows).copyTo(subimg);
+			// hog.detectMultiScale( subimg, detections, foundWeights );
+			// for ( size_t j = 0; j < detections.size(); j++ ){
+			// 	if (foundWeights[j] >= 0.5){
+			// 		detections[j].x -= detections[j].width*0.1;
+			// 		detections[j].width *= 1.2;
+			// 		veh_rect.push_back(detections[j] + Point(0,img_size.height/2));
+			// 		rectangle( veh_mask, detections[j] + Point(0,img_size.height/2), Scalar(255), -1 );
+			// 	}
+			// }
+
+			// warpPerspective(veh_mask, warp_veh_mask, van_pt.per_mtx, Size(warp_col, warp_row) );
+			if (warped_img.rows > 0)
+			{
+				veh_masker.indicateOnWarp(warped_img);
+			}
+
+			LaneImage lane_find_image(warped_img, van_pt, lane_mark, learn_model, veh_masker, key_pts, time_step);
 
 			t_now = clock();
 			cout << "Image processed, using: " << to_string(((float)(t_now - t_last)) / CLOCKS_PER_SEC) << "s. " << endl;
@@ -191,8 +226,19 @@ int main(int argc, char** argv)
 			
 			/// draw estimated lane in warped view, then change to original view, draw vanishing point and draw transform source region
 			Mat newwarp(image.size(), CV_8UC3, Scalar(0, 0, 0));
+			
+
 			van_pt.drawOn( newwarp, lane_mark);
 			
+			veh_masker.drawOn(newwarp);
+			// if (veh_masker.cur_detc.size() >= 1)
+			// {
+			// 	vector<Mat> channels;
+			// 	split(newwarp, channels);
+			// 	channels[2] = veh_mask + channels[2] + 0;
+			// 	merge(channels, newwarp);
+			// }
+
 			if ( lane_mark.new_result ) // current frame succeeds
 			{
 				vector<Point> plot_pts_l, plot_pts_r;
@@ -346,7 +392,7 @@ int main(int argc, char** argv)
 			addWeighted(cali_image, 1, newwarp, 0.3, 0, result);
 			//// circle(result, lane_find_image.__best_van_pt, 5, Scalar(0, 0, 255), -1); // should be the same as Point(last_van_pt)
 			Scalar van_color = van_pt.ini_success ? Scalar(0,0,255) : Scalar(0,255,0);
-			circle(result, Point(van_pt.van_pt_ini), 5, van_color, -1); // should be the same as Point(last_van_pt)
+			circle(result, Point(van_pt.van_pt_ini), 3, van_color, -1); // should be the same as Point(last_van_pt)
 
 			/// add the warped_filter_image to the output image
 			if (van_pt.ini_flag)

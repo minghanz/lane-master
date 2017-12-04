@@ -5,6 +5,13 @@
 #include <opencv2/imgproc/imgproc.hpp> //for cvtColor, Canny
 #include <opencv2/calib3d.hpp> // for calibration
 #include <opencv2/ml/ml.hpp> // for machine learning
+#include <opencv2/objdetect.hpp> // for HOG
+#include <opencv2/tracking.hpp> // for Tracking
+#include <opencv2/tracking/tracker.hpp>
+#include <opencv2/core/ocl.hpp>
+#include <opencv2/xfeatures2d.hpp>
+#include <opencv2/features2d.hpp>
+
 //#include <armadillo>
 
 #include <string>
@@ -28,7 +35,7 @@ extern Size img_size; // defined in main.cpp
 #define NDEBUG_TR // TRAIN
 #define NDEBUG_FT // FIT
 #define NDEBUG_LI // LINE
-#define NDEBUG
+// #define NDEBUG
 //#define NTIME
 // #define HIGH_BOT
 

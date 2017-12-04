@@ -37,7 +37,7 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
 
 	#else
-	van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye
+	van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye for new data in Mcity
 	van_pt_cali = van_pt_ini; 
 	theta_w = 0; 	// yaw angle 
 	theta_h = 0;	// pitch angle
@@ -250,18 +250,18 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			valid_lines_w_right.push_back(getLineWeight(lines[i]));
 		}
 		#ifdef DRAW
-		else if (check_result == 3)
-		{
-			line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(0,255,0),1);
-		}
-		else if (check_result == 4)
-		{
-			line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(255,255,0),1);
-		}
-		else
-		{
-			line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(255,0,0),1);
-		}
+		// else if (check_result == 3) // comment to remove the lines for voting van_pt
+		// {
+		// 	line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(0,255,0),1);
+		// }
+		// else if (check_result == 4)
+		// {
+		// 	line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(255,255,0),1);
+		// }
+		// else
+		// {
+		// 	line(vote_lines_img, Point(lines[i][0],lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(255,0,0),1);
+		// }
 		#endif
 	}
 
@@ -304,8 +304,8 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			y_sum += weight_cur*yp;
 
 			#ifdef DRAW
-			line(vote_lines_img, Point(xl1,yl1), Point(xl2, yl2), Scalar(0,0,255),1);
-			line(vote_lines_img, Point(xr1,yr1), Point(xr2, yr2), Scalar(0,0,255),1);
+			// line(vote_lines_img, Point(xl1,yl1), Point(xl2, yl2), Scalar(0,0,255),1); // comment to remove the lines voting for van_pt
+			// line(vote_lines_img, Point(xr1,yr1), Point(xr2, yr2), Scalar(0,0,255),1);
 			// circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1); // it makes the image not clean
 			#endif
 			line(valid_lines_map, Point(xl1,yl1), Point(xl2, yl2), Scalar(255),1);
@@ -506,9 +506,9 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	}
 
 	#ifdef DRAW
-	circle(vote_lines_img, Point(van_pt_obsv), max(0, (int)van_pt_mse), Scalar(0,0,255));
-	circle(vote_lines_img, Point(van_pt_obsv), 5, Scalar(0,0,255), -1);
-	rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0));
+	// circle(vote_lines_img, Point(van_pt_obsv), max(0, (int)van_pt_mse), Scalar(0,0,255)); // indicating the variance of this estimation
+	circle(vote_lines_img, Point(van_pt_obsv), 3, Scalar(0,0,255), -1);
+	// rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0)); // showing conf_dist
 	cout << "first draw finished. " << endl;
 	#endif
 
@@ -1693,7 +1693,7 @@ void VanPt::drawOn(Mat& newwarp, LaneMark& lane_mark)
 	warp_src_int.push_back(Point(warp_src[3]));
 	warp_test_vec.clear();
 	warp_test_vec.push_back(warp_src_int);
-	drawContours(newwarp, warp_test_vec, -1, Scalar(255, 0, 0), 5 );
+	// drawContours(newwarp, warp_test_vec, -1, Scalar(255, 0, 0), 5 ); // draw the blue region for wrapping 
 	#ifndef NDEBUG_IN
 	cout << " current warp vertex: " << warp_test_vec[0][0] << warp_test_vec[0][1] << warp_test_vec[0][2] << warp_test_vec[0][3] << endl;
 	#endif

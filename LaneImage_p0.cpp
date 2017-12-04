@@ -9,8 +9,8 @@ void cameraCalibration(vector<vector<Point3f> >& obj_pts, vector<vector<Point2f>
 	vector<Point3f> objp;
 	vector<Point2f> imgp;
 	
-	string first_file = "../usb_cali_images/cali%d.jpg"; // for MKZ USB camera
-	// string first_file = "../camera_cal/calibration%d.jpg";
+	// string first_file = "../usb_cali_images/cali%d.jpg"; // for MKZ USB camera
+	string first_file = "../camera_cal/calibration%d.jpg";
 	VideoCapture calib_imgseq(first_file);
 	if (!calib_imgseq.isOpened())
 	{
