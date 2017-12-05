@@ -10,14 +10,33 @@ void KeyPts::renew(vector<Point>& key_left_2p_new, vector<Point>& key_left_2n_ne
     renew_flag = true;
     
 }
-// void KeyPts::match()
-// {
-//     int left_match_num, right_match_num;
-//     left_match_num = min(key_left_2p.size(), key_left_2p_last.size());
-//     right_match_num = min(key_right_2p.size(), key_right_2p_last.size());
+void KeyPts::match()
+{
+    bool left_match_new, right_match_new;
+    int left_match_num, right_match_num;
+    if (key_left_2p.size() < key_left_2p_last.size())
+    {
+        left_match_num = key_left_2p.size();
+        leff_match_new = true;
+    }
+    else
+    {
+        left_match_num = key_left_2p_last.size();
+        left_match_new = false;
+    }
+    if (key_right_2p.size() < key_right_2p_last.size())
+    {
+        right_match_num = key_right_2p.size();
+        right_match_new = true;
+    }
+    else
+    {
+        right_match_num = key_right_2p_last.size();
+        right_match_new = false;
+    }
     
-//     for (int i = 0; i < )
-// }
+    for (int i = 0; i < )
+}
 
 // void match_side(vector<Point>& key_2p, vector<Point>& key_2p_last, int match_num )
 // {
