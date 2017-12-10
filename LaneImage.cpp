@@ -207,8 +207,8 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 		
 		__lane_window_out_img = Mat(warp_row, warp_col, CV_8UC3, Scalar(0, 0, 0));
 		__fitLaneMovingWindow(lane_mark.hist_width, lane_mark.last_all_white, veh_masker);
-		
-		__findKeyCustom(veh_masker, key_pts);
+
+		// __findKeyCustom(veh_masker, key_pts); // feature points in old format
 
 		t_now = clock();
 		cout << "Image fitted, using: " << to_string(((float)(t_now - t_last))/CLOCKS_PER_SEC) << "s. " << endl;
@@ -276,20 +276,22 @@ void LaneImage::__findKeyCustom(VehMask& veh_masker, KeyPts& key_pts)
 
 
 		vector<Point> key_left_2p, key_left_2n;
-		selectPt(lane_window_out_l, lane_out_img_copy, __plot_pts_lr_warp[0], key_left_2p, key_left_2n);
+		bool ini_p_left, end_p_left;
+		selectPt(lane_window_out_l, lane_out_img_copy, __plot_pts_lr_warp[0], key_left_2p, key_left_2n, ini_p_left, end_p_left);
 		cout << "finish key custom 1 " << endl;
 
 		vector<Point> key_right_2p, key_right_2n;
-		selectPt(lane_window_out_r, lane_out_img_copy, __plot_pts_lr_warp[1], key_right_2p, key_right_2n);
+		bool ini_p_right, end_p_right;
+		selectPt(lane_window_out_r, lane_out_img_copy, __plot_pts_lr_warp[1], key_right_2p, key_right_2n, ini_p_right, end_p_right);
 		cout << "finish key custom 2 " << endl;
 
-		key_pts.renew( key_left_2p, key_left_2n, key_right_2p, key_right_2n);
+		key_pts.renew( key_left_2p, key_left_2n, key_right_2p, key_right_2n, ini_p_left, ini_p_right, end_p_left, end_p_right);
 
 		imshow("key_custom", lane_out_img_copy);
 		
 	}
 }
-void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot_pts_warp, vector<Point>& key_2p, vector<Point>& key_2n)
+void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot_pts_warp, vector<Point>& key_2p, vector<Point>& key_2n, bool& ini_p, bool& end_p)
 {
 	int up_thresh = 4, low_thresh = 1, dist_thresh = 10;
 	vector<int> near_nonznum(plot_pts_warp.size(), 0);
@@ -303,6 +305,7 @@ void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot
 	float cache_ctnonz = 0;
 	// bool cur_p = lane_window_side.at<uchar>(plot_pts_warp[0][0]) > 0;
 	bool cur_p = near_nonznum[0] >= up_thresh;
+	ini_p = cur_p;	// to indicate whether the first keypt is 2n (ini_p = true) or 2p (ini_p = false)
 	for (int i = 1; i < plot_pts_warp.size(); i++)
 	{
 		if (plot_pts_warp[i].x >= 0 && plot_pts_warp[i].x < warp_col )
@@ -398,10 +401,19 @@ void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot
 			// }
 		}
 	}
-	if ( !cur_p && cache_point != Point(0, 0) )
+	end_p = cur_p;
+	if (cache_point != Point(0, 0) )
 	{
-		key_2n.push_back(cache_point);
-		circle(lane_out_img_copy, key_2n.back(), 3, Scalar(0, 255, 0), -1);
+		if ( !cur_p )
+		{
+			key_2n.push_back(cache_point);
+			circle(lane_out_img_copy, key_2n.back(), 3, Scalar(0, 255, 0), -1);
+		}
+		else
+		{
+			key_2p.push_back(cache_point);
+			circle(lane_out_img_copy, key_2p.back(), 3, Scalar(0, 255, 0), 1);
+		}
 	}
 }
 

@@ -27,7 +27,8 @@ extern Size img_size; // defined in main.cpp
 class VanPt;
 class LearnModel;
 class LaneMark;
-
+class VehMask;
+class KeyPts;
 
 
 void cameraCalibration(vector<vector<Point3f> >& obj_pts, vector<vector<Point2f> >& img_pts, Size& image_size, int ny=6, int nx=9);
@@ -44,18 +45,20 @@ class LaneImage
 	//// LaneImage (Mat& per_mtx, Mat& inv_per_mtx, Mat& image, float nframe, int samp_cyc, int ini_flag, int& hist_width, bool first_sucs, int window_half_width, Mat& BGR_sample, Mat& HLS_sample, Mat& BGR_resp, Mat& HLS_resp,
 	//// 	Vec3f left_fit = Vec3f(0, 0, 0), Vec3f right_fit = Vec3f(0, 0, 0), Vec3f avg_hist_left_fit = Vec3f(0, 0, 0), Vec3f avg_hist_right_fit = Vec3f(0, 0, 0), vector<int> chnl_thresh = vector<int>(6, 0), Ptr<ml::LogisticRegression> BGR_regg = Ptr<ml::LogisticRegression>(),Ptr<ml::LogisticRegression> HLS_regg = Ptr<ml::LogisticRegression>(), Mat dist_coeff = Mat(), Mat cam_mtx = Mat() );
 	//// #endif
-	LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, float nframe);
+	LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& learn_model, VehMask& veh_masker, KeyPts& key_pts, float nframe);
 
 	void __calibration();
 	void __laneBase(int& hist_width);
 	void __ROIInds(float half_width, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds );
 	// void __reshapeSub(int half_width, const Mat& warp_reshape, const Mat& warp_reshape_HLS, Mat& warp_reshape_sub, Mat& warp_reshape_sub_HLS, vector<Point>& sub_pts  );
 
-	void __imageFilter();
+	void __findKeyPt( VehMask& veh_masker );
+	void __findKeyCustom(VehMask& veh_masker, KeyPts& key_pts);
+	void __imageFilter(Mat& warp_veh_mask);
 	void __warp();
 	void trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds);
-	void __fitLaneMovingWindow(int& hist_width, bool& last_all_white);
-	void __makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty);
+	void __fitLaneMovingWindow(int& hist_width, bool& last_all_white, VehMask& veh_masker);
+	void __makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty, VehMask& veh_masker);
 	float __getDiff(Vec3f& cur_fit, Vec3f& hist_fit);
 	float __getCurveDiff(Vec3f& cur_fit, Vec3f& hist_fit); // consistent with function getLaneWidthWarp
 
@@ -167,6 +170,7 @@ void illuComp(Mat& raw_img, Mat& gray, float& illu_comp);
 
 void extractPeaks(const Mat& src, const int min_peak_dist, const float min_height_diff, const float min_height, vector<int>& max_loc, vector<float>& max_val);
 
+void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot_pts_warp, vector<Point>& key_2p, vector<Point>& key_2n, bool& ini_p, bool& end_p);
 
 string x2str(int num);
 string x2str(float num);

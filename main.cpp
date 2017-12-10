@@ -154,10 +154,10 @@ int main(int argc, char** argv)
 			t_last = t_now;
 
 
-			Mat subimg;
-			cali_image.rowRange(cali_image.rows / 2, cali_image.rows).copyTo(subimg);
+			// Mat subimg;
+			// cali_image.rowRange(cali_image.rows / 2, cali_image.rows).copyTo(subimg);
 
-			veh_masker.detectHOG(subimg, van_pt.per_mtx, van_pt.inv_per_mtx);
+			veh_masker.detectHOG(cali_image, van_pt.per_mtx, van_pt.inv_per_mtx);
 			// vector< Rect > detections;
 			// vector< double > foundWeights;
 			// vector<Rect> veh_rect;
@@ -187,6 +187,11 @@ int main(int argc, char** argv)
 			cout << "Image processed, using: " << to_string(((float)(t_now - t_last)) / CLOCKS_PER_SEC) << "s. " << endl;
 			t_last = t_now;
 
+			key_pts.renew(lane_find_image);
+			// if (key_pts.renew_flag)
+			// {
+			// 	key_pts.match(lane_find_image);
+			// }
 			lane_mark.recordImgFit(lane_find_image);
 
 			Mat result;

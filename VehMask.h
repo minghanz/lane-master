@@ -39,11 +39,14 @@ public:
 
     bool track_mode;
 
+    int sub_img_top;
+    int sub_img_bot;
+
     Mat ori_veh_mask;
 	Mat warp_veh_mask;
 public:
     VehMask();
-    void detectHOG(Mat& subimg, Mat& per_mtx, Mat& inv_per_mtx);
+    void detectHOG(Mat& img, Mat& per_mtx, Mat& inv_per_mtx);
     void drawOn(Mat& newwarp);
     void indicateOnWarp(Mat& warped_raw_img);
     

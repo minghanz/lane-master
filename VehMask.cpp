@@ -108,10 +108,22 @@ VehMask::VehMask() // : tracker(TrackerMIL::create())
 
     ori_veh_mask = Mat(img_size, CV_8UC1, Scalar(0));
 
+    #ifndef HIGH_BOT
+    sub_img_top = img_size.height*0.5;
+    sub_img_bot = img_size.height;
+	#else
+	sub_img_top = img_size.height*0.3;
+    sub_img_bot = img_size.height*0.7;
+	#endif
+
 }
 
-void VehMask::detectHOG(Mat& subimg, Mat& per_mtx, Mat& inv_per_mtx)
+void VehMask::detectHOG(Mat& img, Mat& per_mtx, Mat& inv_per_mtx)
 {
+    Mat subimg;
+    img.rowRange(sub_img_top, sub_img_bot).copyTo(subimg);
+
+
     ori_veh_mask = Mat(img_size, CV_8UC1, Scalar(0));
 
     vector<VehDetc> new_track;
@@ -133,7 +145,7 @@ void VehMask::detectHOG(Mat& subimg, Mat& per_mtx, Mat& inv_per_mtx)
             {
                 detections[j].x -= detections[j].width * 0.1;
                 detections[j].width *= 1.2;
-                Rect cur_rect = detections[j] + Point(0, img_size.height / 2);
+                Rect cur_rect = detections[j] + Point(0, sub_img_top);
 
                 cout << "hog 3" << endl; 
                 if (track_detc.size() == 0)
@@ -201,7 +213,7 @@ void VehMask::detectHOG(Mat& subimg, Mat& per_mtx, Mat& inv_per_mtx)
                 cout << "hog 5" << endl; 
 
                 Ptr<Tracker> tracker = TrackerMIL::create();
-                Rect sub_coord = track_detc[j].pos - Point(0, img_size.height / 2);
+                Rect sub_coord = track_detc[j].pos - Point(0, sub_img_top);
                 Rect2d sub_coord_d;
                 sub_coord_d.x = sub_coord.x;
                 sub_coord_d.y = sub_coord.y;
@@ -284,7 +296,7 @@ void VehMask::detectHOG(Mat& subimg, Mat& per_mtx, Mat& inv_per_mtx)
                             // trackers[i]->init(subimg, cur_track_rect_int-Point(0, img_size.height / 2));
                             // new_trackers.push_back(trackers[i]);
 
-                            cur_track_rect_int = cur_track_rect_int + Point(0, img_size.height / 2);
+                            cur_track_rect_int = cur_track_rect_int + Point(0, sub_img_top);
                             rectangle(ori_veh_mask, cur_track_rect_int, Scalar(255), -1);
                             valid_detc[i].posrenew(cur_track_rect_int, 1, per_mtx, inv_per_mtx);
                             new_track.push_back(valid_detc[i]);
@@ -297,7 +309,7 @@ void VehMask::detectHOG(Mat& subimg, Mat& per_mtx, Mat& inv_per_mtx)
                 else
                 {
                     cout << "Tracking mode for " << i << endl;
-                    cur_track_rect_int = cur_track_rect_int + Point(0, img_size.height / 2);
+                    cur_track_rect_int = cur_track_rect_int + Point(0, sub_img_top);
                     rectangle(ori_veh_mask, cur_track_rect_int, Scalar(255), -1);
                     valid_detc[i].posrenew(cur_track_rect_int, 1, per_mtx, inv_per_mtx);
                     new_track.push_back(valid_detc[i]);

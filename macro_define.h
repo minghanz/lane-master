@@ -37,7 +37,7 @@ extern Size img_size; // defined in main.cpp
 #define NDEBUG_LI // LINE
 // #define NDEBUG
 //#define NTIME
-// #define HIGH_BOT
+// #define HIGH_BOT    // ros_video.avi and caltech
 
 #define DTREE
 //#define LREGG
@@ -48,7 +48,7 @@ extern Size img_size; // defined in main.cpp
 
 #define DRAW
 
-// #define CALI_VAN // whether prior calibrated vanishing point is available
+// #define CALI_VAN // whether prior calibrated vanishing point is available // for long ros_video.avi
 
 // #define CLUSTER_FOR_VOTE //  NMS+Hough  or  cluster+fit  in GaborVote
 #define CANNY_VOTE
