@@ -73,7 +73,7 @@ void KeyPts::match(LaneImage& lane_find_image)
         
         for (int i = 0; i < coord_proj_left.cols; i++)
         {
-            circle(lane_out_img_copy, Point(coord_left_last.at<float>(0, i),coord_left_last.at<float>(1, i)) , 3, Scalar(0, 255, 255), 1);
+            // circle(lane_out_img_copy, Point(coord_left_last.at<float>(0, i),coord_left_last.at<float>(1, i)) , 3, Scalar(0, 255, 255), 1);
             circle(lane_out_img_copy, Point(coord_left.at<float>(0, i),coord_left.at<float>(1, i)) , 3, Scalar(255, 255, 0), 1);
             circle(lane_out_img_copy, Point(coord_proj_left.at<float>(0, i),coord_proj_left.at<float>(1, i)) , 3, Scalar(255, 255, 255), 1);
         }
@@ -97,7 +97,7 @@ void KeyPts::match(LaneImage& lane_find_image)
         
         for (int i = 0; i < coord_proj_right.cols; i++)
         {
-            circle(lane_out_img_copy, Point(coord_right_last.at<float>(0, i),coord_right_last.at<float>(1, i)) , 3, Scalar(0, 255, 255), 1);
+            // circle(lane_out_img_copy, Point(coord_right_last.at<float>(0, i),coord_right_last.at<float>(1, i)) , 3, Scalar(0, 255, 255), 1);
             circle(lane_out_img_copy, Point(coord_right.at<float>(0, i),coord_right.at<float>(1, i)) , 3, Scalar(255, 255, 0), 1);
             circle(lane_out_img_copy, Point(coord_proj_right.at<float>(0, i),coord_proj_right.at<float>(1, i)) , 3, Scalar(255, 255, 255), 1);
             
@@ -203,7 +203,7 @@ void compli_last(vector<Vec4f>& markings, vector<Vec4f>& markings_last, bool mat
                 markings[bot][3] = last_point.at<float>(1);
                 cout << "bottom point 2n predicted " << endl;
                 predicting = true;
-                circle(lane_out_img_copy, Point(markings_last[last_idx][2],markings_last[last_idx][3] ), 3, Scalar(0, 255, 255), -1);
+                // circle(lane_out_img_copy, Point(markings_last[last_idx][2],markings_last[last_idx][3] ), 3, Scalar(0, 255, 255), -1);
                 circle(lane_out_img_copy, Point(markings[bot][2],markings[bot][3]) , 3, Scalar(255, 255, 255), -1);
 
             }
@@ -232,8 +232,8 @@ void compli_last(vector<Vec4f>& markings, vector<Vec4f>& markings_last, bool mat
                 cout << "bottom point 2n predicted " << endl;
                 predicting = true;
 
-                circle(lane_out_img_copy, Point(markings_last[last_idx][0],markings_last[last_idx][1] ), 3, Scalar(0, 255, 255), -1);
-                circle(lane_out_img_copy, Point(markings_last[last_idx][2],markings_last[last_idx][3] ), 3, Scalar(0, 255, 255), -1);
+                // circle(lane_out_img_copy, Point(markings_last[last_idx][0],markings_last[last_idx][1] ), 3, Scalar(0, 255, 255), -1);
+                // circle(lane_out_img_copy, Point(markings_last[last_idx][2],markings_last[last_idx][3] ), 3, Scalar(0, 255, 255), -1);
                 circle(lane_out_img_copy, Point(predicted_bot[0],predicted_bot[1]) , 3, Scalar(255, 255, 255), -1);
                 circle(lane_out_img_copy, Point(predicted_bot[2],predicted_bot[3]) , 3, Scalar(255, 255, 255), -1);
             }

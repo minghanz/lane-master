@@ -95,8 +95,10 @@ public:
     // KalmanFilter kalman;
     float conf_c_x, conf_gamma_x, conf_c_y, conf_gamma_y;
     float conf_c_x_max, conf_c_x_min;
-    float conf_c_y_min;
+    float conf_c_y_min, conf_c_y_max;
     float conf_gamma_e, conf_c_e;
+    float line_gamma_dist, line_c_dist;
+    float line_gamma_dist_max, line_gamma_dist_min;
 
     bool edgeVote(Mat image, Mat edges);
     int checkValidLine(Vec4i line);

@@ -188,10 +188,10 @@ int main(int argc, char** argv)
 			t_last = t_now;
 
 			key_pts.renew(lane_find_image);
-			// if (key_pts.renew_flag)
-			// {
-			// 	key_pts.match(lane_find_image);
-			// }
+			if (key_pts.renew_flag)
+			{
+				key_pts.match(lane_find_image);
+			}
 			lane_mark.recordImgFit(lane_find_image);
 
 			Mat result;

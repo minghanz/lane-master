@@ -85,16 +85,23 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	conf_dist = 0;
 	// kalman.init(2, 2, 0, CV_32F);
 	conf_gamma_x = 1.0 / (20.0 / (480.0 * 0.7) * y_bottom_warp_max);
-	conf_c_x_max = 100.0 / (480.0 * 0.7) * y_bottom_warp_max;
+	conf_c_x_max = 150.0 / (480.0 * 0.7) * y_bottom_warp_max; // 100
 	conf_c_x_min = 30.0 / (480.0 * 0.7) * y_bottom_warp_max;
-	conf_c_x = (conf_c_x_max + conf_c_x_min) / 2;
+	// conf_c_x = (conf_c_x_max + conf_c_x_min) / 2;
+	conf_c_x = conf_c_x_max;
 
 	conf_gamma_y = 1.0 / (10.0 / (480.0 * 0.7) * y_bottom_warp_max);
 	conf_c_y_min = 15.0 / (480.0 * 0.7) * y_bottom_warp_max;
+	conf_c_y_max = conf_c_x_max;
 	conf_c_y = conf_c_x;
 
 	conf_gamma_e = 1.0 / (20.0 / (480.0 * 0.7) * y_bottom_warp_max);
 	conf_c_e = 30.0 / (480.0 * 0.7) * y_bottom_warp_max;
+
+	line_gamma_dist = 1.0 / (100.0 / (480.0 * 0.7) * y_bottom_warp_max); // 40 originally
+	line_c_dist = 70.0 / (480.0 * 0.7) * y_bottom_warp_max; // 70 originally
+	line_gamma_dist_max = 1.0 / (40.0 / (480.0 * 0.7) * y_bottom_warp_max);
+	line_gamma_dist_min = 1.0 / (100.0 / (480.0 * 0.7) * y_bottom_warp_max);
 	#endif
 
 	ini_flag = false;
@@ -160,7 +167,8 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 	updateFlags();
 	if (first_sucs)
 	{
-		van_pt_ini = van_pt_obsv;
+		cout << "First success !!!!!!!!!!!!!!" << endl;
+		// van_pt_ini = van_pt_obsv;
 		theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
 		theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
 	}
@@ -264,6 +272,12 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 		// }
 		#endif
 	}
+	#ifdef DRAW
+	float gamma_dist = line_gamma_dist;
+	float c_dist = line_c_dist;
+	circle(vote_lines_img, Point(van_pt_ini), (int)c_dist, Scalar(255,0,0));
+	circle(vote_lines_img, Point(van_pt_ini), (int)c_dist + (int)(1/gamma_dist), Scalar(255,0,0));
+	#endif
 
 	if (valid_lines_idx_left.size() <= 0 || valid_lines_idx_right.size() <= 0)
 	{
@@ -304,9 +318,9 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			y_sum += weight_cur*yp;
 
 			#ifdef DRAW
-			// line(vote_lines_img, Point(xl1,yl1), Point(xl2, yl2), Scalar(0,0,255),1); // comment to remove the lines voting for van_pt
-			// line(vote_lines_img, Point(xr1,yr1), Point(xr2, yr2), Scalar(0,0,255),1);
-			// circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1); // it makes the image not clean
+			line(vote_lines_img, Point(xl1,yl1), Point(xl2, yl2), Scalar(0,0,255),1); // comment to remove the lines voting for van_pt
+			line(vote_lines_img, Point(xr1,yr1), Point(xr2, yr2), Scalar(0,0,255),1);
+			circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1); // it makes the image not clean
 			#endif
 			line(valid_lines_map, Point(xl1,yl1), Point(xl2, yl2), Scalar(255),1);
 		}
@@ -417,13 +431,11 @@ float VanPt::getLineWeight(Vec4i line)
 
 	float a = y2 - y1, b = x1 - x2, c = x2*y1 - x1*y2;
 	float dist2ref = abs(a*ref_pt.x + b*ref_pt.y + c) / sqrt(a*a + b*b);
-	float gamma_dist = 1.0/40.0, c_dist = 70;
+	// float gamma_dist = 1.0/40.0, c_dist = 70;
+	float gamma_dist = line_gamma_dist;
+	float c_dist = line_c_dist;
 	float dist_weight = 0.5*(1-tanh(gamma_dist*(dist2ref - c_dist)));
 
-	#ifdef DRAW
-	// circle(vote_lines_img, Point(ref_pt), (int)c_dist, Scalar(255,0,0));
-	// circle(vote_lines_img, Point(ref_pt), (int)c_dist + (int)(1/gamma_dist), Scalar(255,0,0));
-	#endif
 
 	float weight = length/(y_bottom_warp_max-ref_pt.y)*(y_bottom - ref_pt.y)/(y_bottom_warp_max - ref_pt.y)*dist_weight;
 
@@ -508,7 +520,7 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	#ifdef DRAW
 	// circle(vote_lines_img, Point(van_pt_obsv), max(0, (int)van_pt_mse), Scalar(0,0,255)); // indicating the variance of this estimation
 	circle(vote_lines_img, Point(van_pt_obsv), 3, Scalar(0,0,255), -1);
-	// rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0)); // showing conf_dist
+	rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0)); // showing conf_dist
 	cout << "first draw finished. " << endl;
 	#endif
 
@@ -524,6 +536,7 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	putText(vote_lines_img, Text3, Point(10, 120), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 	putText(vote_lines_img, Text4, Point(270, 60), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 
+	// imshow("vote_lines_img", vote_lines_img);
 
 	return filter_confidence;
 
@@ -531,7 +544,7 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 
 void VanPt::updateFlags()
 {
-	if (ini_success && ( (confidence >= 0.01) || (!sucs_before && conf_mse >= 0.5) ) ) //  && conf_c_y <= 3*conf_c_y_min
+	if (ini_success && ( (confidence >= 0.01) || (!sucs_before && conf_mse*conf_weight >= 0.01) ) ) //  && conf_c_y <= 3*conf_c_y_min
 	{
 		if (!sucs_before){
 			first_sucs = true;}
@@ -561,11 +574,14 @@ void VanPt::updateTrackVar()
 	if (!ini_success || confidence < 0.01)
 	{
 		conf_c_x = min(conf_c_x_max, float(1.1*conf_c_x));
+		conf_c_y = min(conf_c_y_max, float(1.1*conf_c_y));
+		line_gamma_dist = max(line_gamma_dist_min, float(0.9*line_gamma_dist));
 	}
 	else if (confidence >= 0.03)
 	{
 		conf_c_x = max(conf_c_x_min, float(0.9*conf_c_x));
 		conf_c_y = max(conf_c_y_min, float(0.9*conf_c_y));
+		line_gamma_dist = min(line_gamma_dist_max, float(1.1*line_gamma_dist));
 	}
 }
 

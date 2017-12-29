@@ -228,13 +228,6 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 	
 	
 	
-	
-	if (van_pt.ini_flag)
-	{
-		
-	}
-	else
-		cout << "Current frame is not processed due to failed initialization. " << endl;
 }
 
 
