@@ -3,7 +3,7 @@
 #include "Line.hpp"
 #include "LaneMark.h"
 
-VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h), chnl_thresh(vector<int>(6, 0))
+VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alpha_w), ALPHA_H(alpha_h), chnl_thresh(vector<int>(6, 0))
 {
 	#ifndef HIGH_BOT
 	y_bottom_warp = min(img_size.height * 14/15, img_size.height -1 );
@@ -13,35 +13,67 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 	y_bottom_warp_max = y_bottom_warp;
 	#endif
 
-	#ifdef CALI_VAN
-	coef_pix_per_cm = 0.0074;
-	van_pt_cali_y = 181;		//161.1941 // y = 0.0074(x-161.1941)
-	float van_pt_cali_x = 340;
+	// #ifdef CALI_VAN
+	cali_van = true;
+	if (params[0] == 0)
+	{
+		cali_van = false;
+	}
+	int margin_side;
+	if (cali_van)
+	{
+		coef_pix_per_cm = params[0];
+		van_pt_cali_y = params[1];
+		float van_pt_cali_x = params[2];
 
-	van_pt_cali = Point2f(van_pt_cali_x, van_pt_cali_y);
-	van_pt_ini = van_pt_cali;
-	theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
-	theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
+		// coef_pix_per_cm = 0.0074;
+		// van_pt_cali_y = 181;		//161.1941 // y = 0.0074(x-161.1941)
+		// float van_pt_cali_x = 340;
 
-	float theta_h_cali = atan(tan(alpha_h)*(1- 2*van_pt_cali_y/img_size.height));
+		van_pt_cali = Point2f(van_pt_cali_x, van_pt_cali_y);
+		van_pt_ini = van_pt_cali;
+		theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
+		theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
 
-	float real_width_center = 1 / (coef_pix_per_cm*(img_size.height/2 - van_pt_cali_y)) * 60;
-	float beta_w = atan(tan(alpha_w)*(2*60/img_size.width)); // 60 is half_width when calibrating van_pt
-	float axis_dist = real_width_center / tan(beta_w) ;
-	float cam_height = axis_dist * sin(theta_h_cali);
+		float theta_h_cali = atan(tan(alpha_h)*(1- 2*van_pt_cali_y/img_size.height));
 
-	float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
-	warp_pix_per_cm = warp_col / real_width_bottom;
-	min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
+		float real_width_center = 1 / (coef_pix_per_cm*(img_size.height/2 - van_pt_cali_y)) * 60;
+		float beta_w = atan(tan(alpha_w)*(2*60/img_size.width)); // 60 is half_width when calibrating van_pt
+		float axis_dist = real_width_center / tan(beta_w) ;
+		float cam_height = axis_dist * sin(theta_h_cali);
 
-	cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
+		float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
+		float warp_pix_per_cm = warp_col / real_width_bottom;
+		min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
 
-	#else
-	van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye for new data in Mcity
-	van_pt_cali = van_pt_ini; 
-	theta_w = 0; 	// yaw angle 
-	theta_h = 0;	// pitch angle
-	#endif
+		cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
+		cout << "real_width_bottom: " << real_width_bottom << endl;
+		getchar();
+		int corr_width = min(0.55*real_width_bottom, (double)warp_col-10);
+		margin_side = (warp_col - corr_width)/2;
+		margin_side = warp_col/6;
+		min_width_pixel_warp = warp_col/6;
+	}
+	else
+	{
+		van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye for new data in Mcity
+		van_pt_cali = van_pt_ini; 
+		theta_w = 0; 	// yaw angle 
+		theta_h = 0;	// pitch angle
+
+		min_width_pixel_warp = warp_col/6;
+		margin_side = warp_col/6;
+	}
+	
+
+	// #else
+	// van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye for new data in Mcity
+	// van_pt_cali = van_pt_ini; 
+	// theta_w = 0; 	// yaw angle 
+	// theta_h = 0;	// pitch angle
+
+	// int margin_side = warp_col/6;
+	// #endif
 
 
 	{
@@ -60,10 +92,14 @@ VanPt::VanPt(float alpha_w, float alpha_h) : ALPHA_W(alpha_w), ALPHA_H(alpha_h),
 		warp_test_vec.push_back(warp_test);
 	}
 	warp_dst.clear();
-	warp_dst.push_back(Point2f(warp_col/6, 0 )); 	// remind that calculation with int could result in weird values when division appears!
-	warp_dst.push_back(Point2f(warp_col/6, warp_row -1));
-	warp_dst.push_back(Point2f(warp_col*5/6, warp_row -1 ));
-	warp_dst.push_back(Point2f(warp_col*5/6, 0));
+	// warp_dst.push_back(Point2f(warp_col/6, 0 )); 	// remind that calculation with int could result in weird values when division appears!
+	// warp_dst.push_back(Point2f(warp_col/6, warp_row -1));
+	// warp_dst.push_back(Point2f(warp_col*5/6, warp_row -1 ));
+	// warp_dst.push_back(Point2f(warp_col*5/6, 0));
+	warp_dst.push_back(Point2f(margin_side, 0 )); 	// remind that calculation with int could result in weird values when division appears!
+	warp_dst.push_back(Point2f(margin_side, warp_row -1));
+	warp_dst.push_back(Point2f(warp_col - margin_side, warp_row -1 ));
+	warp_dst.push_back(Point2f(warp_col - margin_side, 0));
 	warp_src.clear();
 	warp_src.push_back(Point2f(warp_test_vec[0][0]));
 	warp_src.push_back(Point2f(warp_test_vec[0][1]));
@@ -168,7 +204,7 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 	if (first_sucs)
 	{
 		cout << "First success !!!!!!!!!!!!!!" << endl;
-		// van_pt_ini = van_pt_obsv;
+		van_pt_ini = van_pt_obsv;
 		theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
 		theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
 	}
@@ -215,12 +251,17 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 
 
 
-	#ifdef CALI_VAN
-	float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
-	warp_pix_per_cm = warp_col / real_width_bottom;
-	min_width_pixel_warp = warp_pix_per_cm * 180; // assume lane width should be no less than 200cm
-	cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
-	#endif
+	// #ifdef CALI_VAN
+	if (cali_van)
+	{
+		float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
+		float warp_pix_per_cm = warp_col / real_width_bottom;
+		min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
+		cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
+		min_width_pixel_warp = warp_col/6;
+	}
+	
+	// #endif
 
 }
 

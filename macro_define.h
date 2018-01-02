@@ -34,7 +34,7 @@ extern Size img_size; // defined in main.cpp
 #define NDEBUG_IN // INITIAL
 #define NDEBUG_TR // TRAIN
 #define NDEBUG_FT // FIT
-#define NDEBUG_LI // LINE
+// #define NDEBUG_LI // LINE
 // #define NDEBUG
 //#define NTIME
 // #define HIGH_BOT    // ros_video.avi and caltech

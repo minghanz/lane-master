@@ -32,7 +32,7 @@ class LaneMark;
 class VanPt
 {
 public:
-    VanPt(float alpha_w, float alpha_h);
+    VanPt(float alpha_w, float alpha_h, vector<float>& params);
     void initialVan(Mat color_img, Mat gray, Mat& warped_img, LaneMark& lane_mark);
     void SteerFilter(Mat image, Mat& steer_resp, Mat& steer_angle_max, Mat& steer_resp_weight);
     void getSteerKernel(Mat& kernel_x, Mat& kernel_y, Mat& kernel_xy, int ksize, double sigma);
@@ -55,12 +55,14 @@ public:
     Point2f van_pt_cali;
 
     /// not in individual VanPt
-    #ifdef CALI_VAN
+    bool cali_van;
+    // #ifdef CALI_VAN
+
     float coef_pix_per_cm;
     float van_pt_cali_y;	
-    float warp_pix_per_cm;
+    // float warp_pix_per_cm;
     float min_width_pixel_warp;
-    #endif
+    // #endif
     ///////////////////////////////
     vector<Vec4i> lines_vote;
 

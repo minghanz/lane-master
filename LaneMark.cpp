@@ -38,6 +38,11 @@ void LaneMark::recordImgFit(LaneImage& lane_find_image)
 	initial_frame = lane_find_image.__initial_frame;
 	new_result = (left_fit_img != Vec3f(0, 0, 0) && right_fit_img != Vec3f(0, 0, 0));
 
+	cout << "left_fit_img: " << left_fit_img << ", right_fit_img: " << right_fit_img << endl;
+	cout << "new_result: " << new_result << endl;
+	// getchar();
+
+
 	split = lane_find_image.__split;
 	new_branch_found = lane_find_image.__new_branch_found;
 	split_recover_count = lane_find_image.__split_recover_count;
@@ -64,6 +69,9 @@ void LaneMark::recordBestFit(Line& left_lane, Line& right_lane)
 	{
 		new_result = false;
 	}
+	cout << "left_lane.detected: " << left_lane.detected << ", right_lane.detected: " << right_lane.detected << endl;
+	cout << "new_result: " << new_result << endl;
+	// getchar();
     
 }
 

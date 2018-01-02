@@ -184,11 +184,11 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 		__avg_hist_right_fit = lane_mark.avg_hist_right_fit;
 		
 		__first_sucs = van_pt.first_sucs;
-		#ifdef CALI_VAN
+		// #ifdef CALI_VAN
 		__min_width_warp = van_pt.min_width_pixel_warp;
-		#else
-		__min_width_warp = warp_col/6;
-		#endif
+		// #else
+		// __min_width_warp = warp_col/6;
+		// #endif
 
 		///////////////////////////// start to find lanes
 		clock_t t_last = clock();

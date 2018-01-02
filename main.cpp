@@ -27,9 +27,24 @@ int main(int argc, char** argv)
 			cali = false;
 	}
 	
-	Mat cam_mtx, dist_coeff; // camera matrix(inner parameters) and distortion coefficient
+	Mat cam_mtx(3, 3, CV_64FC1, Scalar(0)); // camera matrix(inner parameters) and distortion coefficient
+	Mat dist_coeff;
 	float alpha_w, alpha_h; // horizontal and vertical angle of view
-	
+
+	char cam_mtx_param[200], dist_coeff_param[200], van_param_s[200];
+	ifstream cali_file("../prj_cali/calib_red_mkz_webcam.txt");
+	cali_file.getline(cam_mtx_param, 200);
+	cali_file.getline(dist_coeff_param, 200);
+	cali_file.getline(van_param_s, 200);
+
+	vector<float> van_param(3, 0);
+	sscanf(van_param_s, "%f %f %f", &(van_param[0]), &(van_param[1]), &(van_param[2]));
+	cout << "van_param: " << van_param[0] << " " << van_param[1] << " " << van_param[2] << endl;
+
+	if (cam_mtx_param[0] == '0')
+	{
+		cali = false;
+	}
 	if (cali)
 	{
 		/// initialize for camera calibration
@@ -40,8 +55,44 @@ int main(int argc, char** argv)
 		
 		vector<Mat> rvecs, tvecs;
 		calibrateCamera(obj_pts, img_pts, image_size, cam_mtx, dist_coeff, rvecs, tvecs);
+
+		// sscanf(cam_mtx_param, "%lf %lf %lf %lf", &cam_mtx.at<double>(0, 0), &cam_mtx.at<double>(1, 1), &cam_mtx.at<double>(0, 2), &cam_mtx.at<double>(1, 2));
+		
+		// vector<double> dist_coeff_vec;
+		// for (int i = 0, j = 0; i < strlen(dist_coeff_param); i++)
+		// {
+		// 	if (dist_coeff_param[i] == ' ')
+		// 	{
+		// 		double temp_param;
+		// 		string temp(dist_coeff_param + j, i - j);
+		// 		stringstream ss;
+		// 		ss << temp;
+		// 		ss >> temp_param;
+		// 		dist_coeff_vec.push_back(temp_param);
+		// 		j = i+1;
+		// 	}
+		// }
+		// dist_coeff = Mat(1, dist_coeff_vec.size(), CV_64FC1);
+		// for (int i = 0; i < dist_coeff_vec.size(); i++)
+		// {
+		// 	dist_coeff.at<double>(i) = dist_coeff_vec[i];
+		// }
 		
 		cout << "cameraMatrix: " << cam_mtx << endl;
+		cout << "dist_coeff: " << dist_coeff << endl;
+
+		// cout << "dist_coeff: [";
+		// for (int i = 0; i < dist_coeff.size(); i++)
+		// {
+		// 	cout << dist_coeff[i] << ", ";
+		// }
+		// cout << "]" << endl;
+
+		cout << "size of cam_mtx: " << cam_mtx.size() << endl;
+		cout << "depth of cam_mtx: " << cam_mtx.depth() << endl;
+		cout << "size of dist_coeff: " << dist_coeff.size() << endl;
+		cout << "depth of dist_coeff: " << dist_coeff.depth() << endl;
+		getchar();
 		cout << cam_mtx.at<double>(0,2) << " " << cam_mtx.at<double>(0,0) << endl;
 		cout << cam_mtx.at<double>(1,2) << " " << cam_mtx.at<double>(1,1) << endl;
 		
@@ -71,7 +122,7 @@ int main(int argc, char** argv)
 	img_size = Size(reader.get(CV_CAP_PROP_FRAME_WIDTH), reader.get(CV_CAP_PROP_FRAME_HEIGHT));
 
 	Line left_lane, right_lane;
-	VanPt van_pt(alpha_w, alpha_h);
+	VanPt van_pt(alpha_w, alpha_h, van_param);
     LaneMark lane_mark;
 	LearnModel learn_model;
 	VehMask veh_masker;
@@ -132,6 +183,11 @@ int main(int argc, char** argv)
 			{
 				image.copyTo(cali_image);
 			} // not copied
+
+			imshow("image", image);
+			waitKey(0);
+			imshow("cali_image", cali_image);
+			waitKey(0);
 
 			#ifndef NDEBUG
 			// cout << "cali image size" << cali_image.size() << endl;
@@ -248,7 +304,7 @@ int main(int argc, char** argv)
 			{
 				vector<Point> plot_pts_l, plot_pts_r;
 				lane_mark.drawOn(newwarp, plot_pts_l, plot_pts_r, van_pt, lane_find_image);
-			
+
 				#ifdef EVA
 				/// evaluate the result quantitatively
 				//if ( (time_step >= 46 && time_step <= 55) || (time_step >= 123 && time_step <= 145) || (time_step >= 214 && time_step <= 224) || (time_step >= 343 && time_step <= 362) )
