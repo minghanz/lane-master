@@ -1,6 +1,3 @@
-/home/minghan/lane-detection/5/CMakeFiles/edit_cache.dir
-/home/minghan/lane-detection/5/CMakeFiles/rebuild_cache.dir
-/home/minghan/lane-detection/5/CMakeFiles/lane-detection.dir
-/home/minghan/lane-detection/5/alglib/CMakeFiles/edit_cache.dir
-/home/minghan/lane-detection/5/alglib/CMakeFiles/rebuild_cache.dir
-/home/minghan/lane-detection/5/alglib/CMakeFiles/alglib.dir
+/home/minghanz/lane-detection/5/CMakeFiles/edit_cache.dir
+/home/minghanz/lane-detection/5/CMakeFiles/rebuild_cache.dir
+/home/minghanz/lane-detection/5/CMakeFiles/lane-detection.dir

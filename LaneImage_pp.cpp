@@ -99,7 +99,7 @@ void illuComp(Mat& raw_img, Mat& gray, float& illu_comp)
 		cout << accu_graylevel << " " << effective_num_pix << endl;
 		cout << "avg_gray: " << avg_gray<< endl;
 		#endif
-		illu_comp = 100 / avg_gray;
+		illu_comp = 60 / avg_gray; // 80 100
 	}
 	
 	#ifndef NDEBUG_IN

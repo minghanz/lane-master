@@ -48,18 +48,18 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/minghan/lane-detection/5
+CMAKE_SOURCE_DIR = /home/minghanz/lane-detection/5
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/minghan/lane-detection/5
+CMAKE_BINARY_DIR = /home/minghanz/lane-detection/5
 
 #=============================================================================
 # Targets provided globally by CMake.
 
 # Special rule for the target edit_cache
 edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	/usr/bin/cmake -E echo No\ interactive\ CMake\ dialog\ available.
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake cache editor..."
+	/usr/bin/cmake-gui -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -80,14 +80,14 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /home/minghan/lane-detection/5 && $(CMAKE_COMMAND) -E cmake_progress_start /home/minghan/lane-detection/5/CMakeFiles /home/minghan/lane-detection/5/alglib/CMakeFiles/progress.marks
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghan/lane-detection/5/CMakeFiles 0
+	cd /home/minghanz/lane-detection/5 && $(CMAKE_COMMAND) -E cmake_progress_start /home/minghanz/lane-detection/5/CMakeFiles /home/minghanz/lane-detection/5/alglib/CMakeFiles/progress.marks
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghanz/lane-detection/5/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/clean
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/clean
 .PHONY : clean
 
 # The main clean target
@@ -97,22 +97,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/preinstall
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/preinstall
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /home/minghan/lane-detection/5 && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /home/minghanz/lane-detection/5 && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 alglib/CMakeFiles/alglib.dir/rule:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/CMakeFiles/alglib.dir/rule
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f CMakeFiles/Makefile2 alglib/CMakeFiles/alglib.dir/rule
 .PHONY : alglib/CMakeFiles/alglib.dir/rule
 
 # Convenience name for target.
@@ -122,7 +122,7 @@ alglib: alglib/CMakeFiles/alglib.dir/rule
 
 # fast build rule for target.
 alglib/fast:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/build
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/build
 .PHONY : alglib/fast
 
 alglibinternal.o: alglibinternal.cpp.o
@@ -131,7 +131,7 @@ alglibinternal.o: alglibinternal.cpp.o
 
 # target to build an object file
 alglibinternal.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibinternal.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibinternal.cpp.o
 .PHONY : alglibinternal.cpp.o
 
 alglibinternal.i: alglibinternal.cpp.i
@@ -140,7 +140,7 @@ alglibinternal.i: alglibinternal.cpp.i
 
 # target to preprocess a source file
 alglibinternal.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibinternal.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibinternal.cpp.i
 .PHONY : alglibinternal.cpp.i
 
 alglibinternal.s: alglibinternal.cpp.s
@@ -149,7 +149,7 @@ alglibinternal.s: alglibinternal.cpp.s
 
 # target to generate assembly for a file
 alglibinternal.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibinternal.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibinternal.cpp.s
 .PHONY : alglibinternal.cpp.s
 
 alglibmisc.o: alglibmisc.cpp.o
@@ -158,7 +158,7 @@ alglibmisc.o: alglibmisc.cpp.o
 
 # target to build an object file
 alglibmisc.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibmisc.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibmisc.cpp.o
 .PHONY : alglibmisc.cpp.o
 
 alglibmisc.i: alglibmisc.cpp.i
@@ -167,7 +167,7 @@ alglibmisc.i: alglibmisc.cpp.i
 
 # target to preprocess a source file
 alglibmisc.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibmisc.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibmisc.cpp.i
 .PHONY : alglibmisc.cpp.i
 
 alglibmisc.s: alglibmisc.cpp.s
@@ -176,7 +176,7 @@ alglibmisc.s: alglibmisc.cpp.s
 
 # target to generate assembly for a file
 alglibmisc.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibmisc.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/alglibmisc.cpp.s
 .PHONY : alglibmisc.cpp.s
 
 ap.o: ap.cpp.o
@@ -185,7 +185,7 @@ ap.o: ap.cpp.o
 
 # target to build an object file
 ap.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/ap.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/ap.cpp.o
 .PHONY : ap.cpp.o
 
 ap.i: ap.cpp.i
@@ -194,7 +194,7 @@ ap.i: ap.cpp.i
 
 # target to preprocess a source file
 ap.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/ap.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/ap.cpp.i
 .PHONY : ap.cpp.i
 
 ap.s: ap.cpp.s
@@ -203,7 +203,7 @@ ap.s: ap.cpp.s
 
 # target to generate assembly for a file
 ap.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/ap.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/ap.cpp.s
 .PHONY : ap.cpp.s
 
 integration.o: integration.cpp.o
@@ -212,7 +212,7 @@ integration.o: integration.cpp.o
 
 # target to build an object file
 integration.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/integration.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/integration.cpp.o
 .PHONY : integration.cpp.o
 
 integration.i: integration.cpp.i
@@ -221,7 +221,7 @@ integration.i: integration.cpp.i
 
 # target to preprocess a source file
 integration.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/integration.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/integration.cpp.i
 .PHONY : integration.cpp.i
 
 integration.s: integration.cpp.s
@@ -230,7 +230,7 @@ integration.s: integration.cpp.s
 
 # target to generate assembly for a file
 integration.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/integration.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/integration.cpp.s
 .PHONY : integration.cpp.s
 
 interpolation.o: interpolation.cpp.o
@@ -239,7 +239,7 @@ interpolation.o: interpolation.cpp.o
 
 # target to build an object file
 interpolation.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/interpolation.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/interpolation.cpp.o
 .PHONY : interpolation.cpp.o
 
 interpolation.i: interpolation.cpp.i
@@ -248,7 +248,7 @@ interpolation.i: interpolation.cpp.i
 
 # target to preprocess a source file
 interpolation.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/interpolation.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/interpolation.cpp.i
 .PHONY : interpolation.cpp.i
 
 interpolation.s: interpolation.cpp.s
@@ -257,7 +257,7 @@ interpolation.s: interpolation.cpp.s
 
 # target to generate assembly for a file
 interpolation.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/interpolation.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/interpolation.cpp.s
 .PHONY : interpolation.cpp.s
 
 linalg.o: linalg.cpp.o
@@ -266,7 +266,7 @@ linalg.o: linalg.cpp.o
 
 # target to build an object file
 linalg.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/linalg.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/linalg.cpp.o
 .PHONY : linalg.cpp.o
 
 linalg.i: linalg.cpp.i
@@ -275,7 +275,7 @@ linalg.i: linalg.cpp.i
 
 # target to preprocess a source file
 linalg.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/linalg.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/linalg.cpp.i
 .PHONY : linalg.cpp.i
 
 linalg.s: linalg.cpp.s
@@ -284,7 +284,7 @@ linalg.s: linalg.cpp.s
 
 # target to generate assembly for a file
 linalg.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/linalg.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/linalg.cpp.s
 .PHONY : linalg.cpp.s
 
 optimization.o: optimization.cpp.o
@@ -293,7 +293,7 @@ optimization.o: optimization.cpp.o
 
 # target to build an object file
 optimization.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/optimization.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/optimization.cpp.o
 .PHONY : optimization.cpp.o
 
 optimization.i: optimization.cpp.i
@@ -302,7 +302,7 @@ optimization.i: optimization.cpp.i
 
 # target to preprocess a source file
 optimization.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/optimization.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/optimization.cpp.i
 .PHONY : optimization.cpp.i
 
 optimization.s: optimization.cpp.s
@@ -311,7 +311,7 @@ optimization.s: optimization.cpp.s
 
 # target to generate assembly for a file
 optimization.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/optimization.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/optimization.cpp.s
 .PHONY : optimization.cpp.s
 
 solvers.o: solvers.cpp.o
@@ -320,7 +320,7 @@ solvers.o: solvers.cpp.o
 
 # target to build an object file
 solvers.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/solvers.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/solvers.cpp.o
 .PHONY : solvers.cpp.o
 
 solvers.i: solvers.cpp.i
@@ -329,7 +329,7 @@ solvers.i: solvers.cpp.i
 
 # target to preprocess a source file
 solvers.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/solvers.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/solvers.cpp.i
 .PHONY : solvers.cpp.i
 
 solvers.s: solvers.cpp.s
@@ -338,7 +338,7 @@ solvers.s: solvers.cpp.s
 
 # target to generate assembly for a file
 solvers.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/solvers.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/solvers.cpp.s
 .PHONY : solvers.cpp.s
 
 specialfunctions.o: specialfunctions.cpp.o
@@ -347,7 +347,7 @@ specialfunctions.o: specialfunctions.cpp.o
 
 # target to build an object file
 specialfunctions.cpp.o:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/specialfunctions.cpp.o
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/specialfunctions.cpp.o
 .PHONY : specialfunctions.cpp.o
 
 specialfunctions.i: specialfunctions.cpp.i
@@ -356,7 +356,7 @@ specialfunctions.i: specialfunctions.cpp.i
 
 # target to preprocess a source file
 specialfunctions.cpp.i:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/specialfunctions.cpp.i
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/specialfunctions.cpp.i
 .PHONY : specialfunctions.cpp.i
 
 specialfunctions.s: specialfunctions.cpp.s
@@ -365,7 +365,7 @@ specialfunctions.s: specialfunctions.cpp.s
 
 # target to generate assembly for a file
 specialfunctions.cpp.s:
-	cd /home/minghan/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/specialfunctions.cpp.s
+	cd /home/minghanz/lane-detection/5 && $(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/specialfunctions.cpp.s
 .PHONY : specialfunctions.cpp.s
 
 # Help Target
@@ -415,6 +415,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /home/minghan/lane-detection/5 && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /home/minghanz/lane-detection/5 && $(CMAKE_COMMAND) -H$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

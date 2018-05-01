@@ -1,4 +1,4 @@
-# Install script for directory: /home/minghan/lane-detection/5/alglib
+# Install script for directory: /home/minghanz/lane-detection/5/alglib
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

@@ -58,7 +58,9 @@ class LaneImage
 	void __warp();
 	void trainmodel(Mat& warped_filter_image_U, valarray<float>& nonzx, valarray<float>& nonzy, valarray<bool>& left_lane_inds, valarray<bool>& right_lane_inds);
 	void __fitLaneMovingWindow(int& hist_width, bool& last_all_white, VehMask& veh_masker);
-	void __makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty, VehMask& veh_masker);
+	void __makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, 
+		int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty, VehMask& veh_masker, 
+		int& grad_num_left, int& grad_num_right);
 	float __getDiff(Vec3f& cur_fit, Vec3f& hist_fit);
 	float __getCurveDiff(Vec3f& cur_fit, Vec3f& hist_fit); // consistent with function getLaneWidthWarp
 
@@ -91,7 +93,10 @@ class LaneImage
 	Vec2f __abs_y_thresh;
 	Vec2f __mag_thresh;
 	Vec2f __dir_thresh;
-	Mat __filter_binary; // not used
+	Mat __filter_binary_dir;
+	// Mat __binary_output_color; // not used
+	Mat __binary_output_gradient;
+	
 	
 	Mat __sobelx;
 	Mat __filter_binary_x_p, __filter_binary_x_n; // for makeUpFilter
@@ -135,7 +140,7 @@ class LaneImage
 	float __left_curve_dist_to_hist, __right_curve_dist_to_hist;
 	
 	bool __first_sucs; // for finding lane base
-	int __min_width_warp;
+	int __min_width_warp, __min_marking_length;
 	
 	float __mean_dist; // the renewing of window_width is based on refined lane
 	
@@ -171,6 +176,8 @@ void illuComp(Mat& raw_img, Mat& gray, float& illu_comp);
 void extractPeaks(const Mat& src, const int min_peak_dist, const float min_height_diff, const float min_height, vector<int>& max_loc, vector<float>& max_val);
 
 void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot_pts_warp, vector<Point>& key_2p, vector<Point>& key_2n, bool& ini_p, bool& end_p);
+
+void findWindowPix(valarray<float>& nonzx_cur_left, valarray<float>& nonzy_cur_left, int i, float window_height, float& leftx_cur, float __window_min_pixel);
 
 string x2str(int num);
 string x2str(float num);

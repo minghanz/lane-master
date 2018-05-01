@@ -60,7 +60,7 @@ public:
 
     float coef_pix_per_cm;
     float van_pt_cali_y;	
-    // float warp_pix_per_cm;
+    float min_length_pixel_warp;
     float min_width_pixel_warp;
     // #endif
     ///////////////////////////////

@@ -73,6 +73,15 @@ void LaneImage::__fitLaneMovingWindow(int &hist_width, bool &last_all_white, Veh
 
 	srand(time(NULL));  // for sampling if oneside dominates
 	bool normal = true; // for indicating whether abnormal cases are found
+
+	int grad_num_left = countNonZero(__binary_output_gradient.colRange(0, warp_col/2));
+	int grad_num_right = countNonZero(__binary_output_gradient.colRange(warp_col/2, warp_col));
+	
+#ifndef NDEBUG_FT
+		cout << "# of left grad pixels:  " << grad_num_left << endl;
+		cout << "# of right grad pixels: " << grad_num_right << endl;
+#endif
+
 	for (int iteration_subsample = 0; iteration_subsample < iteration_subsample_num; iteration_subsample++)
 	{
 		time_t t_temp4 = clock();
@@ -88,7 +97,8 @@ void LaneImage::__fitLaneMovingWindow(int &hist_width, bool &last_all_white, Veh
 #endif
 
 		/// safe return
-		if (leftx.size() <= __window_min_pixel || rightx.size() <= __window_min_pixel ||
+		if (leftx.size() <= __window_min_pixel || rightx.size() <= __window_min_pixel || 
+			grad_num_left <= __window_min_pixel || grad_num_right <= __window_min_pixel || 
 			lefty.min() >= warp_row * 9 / 10 || righty.min() >= warp_row * 9 / 10) // lefty.min() >= warp_row*4/5 || righty.min() >= warp_row*4/5 || lefty.max() <= warp_row/2 || righty.max() <= warp_row/2
 		{
 			if (iteration_subsample == 0) /// allow makeUpFilter
@@ -98,15 +108,16 @@ void LaneImage::__fitLaneMovingWindow(int &hist_width, bool &last_all_white, Veh
 				{
 					cout << "Make-up filter used for right lane. " << endl;
 					left = false;
-					__makeUpFilter(left, warped_filter_image_U, nonz_loc, nonzx, nonzy, hist_width, leftx, lefty, rightx, righty, veh_masker);
+					__makeUpFilter(left, warped_filter_image_U, nonz_loc, nonzx, nonzy, hist_width, leftx, lefty, rightx, righty, veh_masker, grad_num_left, grad_num_right);
 				}
 				else if (leftx.size() <= __window_min_pixel && rightx.size() > __window_min_pixel)
 				{
 					cout << "Make-up filter used for left lane. " << endl;
 					left = true;
-					__makeUpFilter(left, warped_filter_image_U, nonz_loc, nonzx, nonzy, hist_width, leftx, lefty, rightx, righty, veh_masker);
+					__makeUpFilter(left, warped_filter_image_U, nonz_loc, nonzx, nonzy, hist_width, leftx, lefty, rightx, righty, veh_masker, grad_num_left, grad_num_right);
 				}
 				if (leftx.size() <= __window_min_pixel || rightx.size() <= __window_min_pixel ||
+					grad_num_left <= __window_min_pixel || grad_num_right <= __window_min_pixel || 
 					lefty.min() >= warp_row * 4 / 5 || righty.min() >= warp_row * 4 / 5) // check the conditions again // || lefty.max() <= warp_row/2 || righty.max() <= warp_row/2
 				{
 					cout << "This frame failed: no lane pixel found" << endl;

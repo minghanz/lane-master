@@ -167,7 +167,7 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 		__window_number = 10;
 		//__window_half_width = warp_col/12;
 		__window_half_width = lane_mark.window_half_width;
-		__window_min_pixel = warp_row/__window_number*__window_half_width*2/100; // 1%.   60 for 1280*720(hand set). 
+		__window_min_pixel = warp_row/__window_number*__window_half_width*2/10; // 1%.  400/10*25*2/100 = 20  400/10*25*2/10 = 200
 		#ifndef NDEBUG_FT
 		cout << "min pixel: " << __window_min_pixel << endl;
 		#endif
@@ -186,6 +186,7 @@ LaneImage::LaneImage(Mat image, VanPt& van_pt, LaneMark& lane_mark, LearnModel& 
 		__first_sucs = van_pt.first_sucs;
 		// #ifdef CALI_VAN
 		__min_width_warp = van_pt.min_width_pixel_warp;
+		__min_marking_length = van_pt.min_length_pixel_warp;
 		// #else
 		// __min_width_warp = warp_col/6;
 		// #endif
@@ -646,42 +647,70 @@ void LaneImage::__imageFilter(Mat& warp_veh_mask)
 	
 	sobelx.copyTo(__sobelx); // for __makeUpFilter
 	
-	Mat sobel_xp, sobel_xn;
-	threshold(sobelx, sobel_xp, 0, 1, THRESH_TOZERO);
-	sobel_xn = -sobelx;
-	threshold(sobel_xn, sobel_xn, 0, 1, THRESH_TOZERO);
-	
-	Mat filter_binary_x_p, filter_binary_x_n, filter_binary_dir;
-	sobelAbsThresh(sobel_xp, filter_binary_x_p, __abs_x_thresh_pre);
-	sobelAbsThresh(sobel_xn, filter_binary_x_n, __abs_x_thresh_pre);
-	sobelDirThresh(sobelx, sobely, filter_binary_dir, __dir_thresh);
-	
-	time_t t_temp6 = clock();
-	
-	filter_binary_x_p = filter_binary_x_p & filter_binary_dir;
-	filter_binary_x_n = filter_binary_x_n & filter_binary_dir;
-	
-	__filter_binary_x_n = filter_binary_x_n;  // for __makeUpFilter
-	__filter_binary_x_p = filter_binary_x_p;
-	
+	Mat sobel_xp = sobelx > 0, sobel_xn = sobelx < 0;
+
+	Mat filter_binary_x_p, filter_binary_x_n; //, __filter_binary_dir;
+	sobelDirThresh(sobelx, sobely, __filter_binary_dir, __dir_thresh);
+
+	Mat edges(gray.size(), gray.type(), Scalar(0));
+	Canny(gray.rowRange(0, warp_row/2), edges.rowRange(0, warp_row/2), 20, 40, 3);
+	Canny(gray.rowRange(warp_row/2, warp_row), edges.rowRange(warp_row/2, warp_row), 30, 60, 3);
+
+	filter_binary_x_p = edges & __filter_binary_dir & sobel_xp;
+	filter_binary_x_n = edges & __filter_binary_dir & sobel_xn;
+
 	int dilate_width = max( (int)round(__window_half_width*0.4),4);
 	int move_dist = max( (int)round(__window_half_width*0.2),2);
+	Mat expand_kernel = getStructuringElement(MORPH_RECT, Size(dilate_width, 1));
+
+	// {
+	// 	Mat sobel_xp, sobel_xn;
+	// 	// threshold(sobelx, sobel_xp, 0, 1, THRESH_TOZERO);
+	// 	sobel_xn = -sobelx;
+	// 	// threshold(sobel_xn, sobel_xn, 0, 1, THRESH_TOZERO);
+
+	// 	// sobelAbsThresh(sobel_xp, __filter_binary_x_p, __abs_x_thresh_pre);   // relative threshold is not good!!!
+	// 	// sobelAbsThresh(sobel_xn, __filter_binary_x_n, __abs_x_thresh_pre);
+	// 	__filter_binary_x_p = sobelx > 300;
+	// 	__filter_binary_x_n = sobel_xn > 300;
+		
+	// 	__filter_binary_x_p = __filter_binary_x_p & __filter_binary_dir;
+	// 	__filter_binary_x_n = __filter_binary_x_n & __filter_binary_dir;   // for __makeUpFilter
+
+	// 	Mat filter_binary_p_2left(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+	// 	Mat filter_binary_n_2left(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+	// 	Mat filter_binary_p_2right(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+	// 	Mat filter_binary_n_2right(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+	// 	filter_binary_p_2right.colRange(move_dist, warp_col) = __filter_binary_x_p.colRange(0, warp_col - move_dist) + 0;
+	// 	filter_binary_p_2left.colRange(0, warp_col - move_dist) = __filter_binary_x_p.colRange(move_dist, warp_col) + 0;
+	// 	filter_binary_n_2right.colRange(move_dist, warp_col) = __filter_binary_x_n.colRange(0, warp_col - move_dist) + 0;
+	// 	filter_binary_n_2left.colRange(0, warp_col - move_dist) = __filter_binary_x_n.colRange(move_dist, warp_col) + 0;
+
+	// 	dilate(filter_binary_p_2right, filter_binary_p_2right, expand_kernel);
+	// 	dilate(filter_binary_p_2left, filter_binary_p_2left, expand_kernel);
+	// 	dilate(filter_binary_n_2right, filter_binary_n_2right, expand_kernel);
+	// 	dilate(filter_binary_n_2left, filter_binary_n_2left, expand_kernel);
+		
+	// }
+
+	time_t t_temp6 = clock();
+	
 	
 	#ifndef NDEBUG_GR
 	cout << "dilate width: " << dilate_width << endl; // /5
-	imshow("filter_binary_p", filter_binary_x_p);
-	imshow("filter_binary_n", filter_binary_x_n);
+	// imshow("filter_binary_p", filter_binary_x_p);
+	// imshow("filter_binary_n", filter_binary_x_n);
 	#endif
 	Mat filter_binary_p_move(filter_binary_x_p.size(), filter_binary_x_p.type(), Scalar(0));
 	Mat filter_binary_n_move(filter_binary_x_p.size(), filter_binary_x_p.type(), Scalar(0));
 	filter_binary_p_move.colRange(move_dist, warp_col) = filter_binary_x_p.colRange(0, warp_col - move_dist) + 0;
 	filter_binary_n_move.colRange(0, warp_col - move_dist) = filter_binary_x_n.colRange(move_dist, warp_col) + 0;
 	#ifndef NDEBUG_GR
-	imshow("filter_binary_p_dilate 1", filter_binary_p_move);
-	imshow("filter_binary_n_dilate 1", filter_binary_n_move);
+	// imshow("filter_binary_p_dilate 1", filter_binary_p_move);
+	// imshow("filter_binary_n_dilate 1", filter_binary_n_move);
 	cout << "move dist: " << move_dist << endl;
 	#endif
-	Mat expand_kernel = getStructuringElement(MORPH_RECT, Size(dilate_width, 1));
+	
 	dilate(filter_binary_p_move, filter_binary_p_move, expand_kernel);
 	dilate(filter_binary_n_move, filter_binary_n_move, expand_kernel);
 	#ifndef NDEBUG_GR
@@ -689,45 +718,186 @@ void LaneImage::__imageFilter(Mat& warp_veh_mask)
 	imshow("filter_binary_p_dilate", filter_binary_p_move);
 	imshow("filter_binary_n_dilate", filter_binary_n_move);
 	#endif
-	Mat binary_output_gradient = filter_binary_p_move & filter_binary_n_move;
+	/*Mat*/ __binary_output_gradient = filter_binary_p_move & filter_binary_n_move;
 	
 	#ifndef NDEBUG_GR
-	imshow("binary_output_gradient 1", binary_output_gradient);
+	imshow("__binary_output_gradient 1", __binary_output_gradient);
 	#endif
 	
-	sobelx.setTo(0, ~binary_output_gradient);
-	Mat abs_sobelx = abs(sobelx);
-	binary_output_gradient.convertTo(binary_output_gradient, binary_output_color.type(), 0 ); // 1.0/(255.0*2)
-	
-	Mat sobel_xtop(warp_row, warp_col, CV_32FC1, Scalar(0));
-	Mat sobel_xbot(warp_row, warp_col, CV_32FC1, Scalar(0));
-	sobel_xtop.rowRange(0, warp_row/2) = abs_sobelx.rowRange(0, warp_row/2) + 0;
-	sobel_xbot.rowRange(warp_row/2, warp_row) = abs_sobelx.rowRange(warp_row/2, warp_row) + 0;
-	
-	Mat filter_binary_x_top, filter_binary_x_bot;
-	sobelAbsThresh(sobel_xtop, filter_binary_x_top, __abs_x_thresh);
-	sobelAbsThresh(sobel_xbot, filter_binary_x_bot, __abs_x_thresh);
-	binary_output_gradient.setTo(1, filter_binary_x_top | filter_binary_x_bot);
-	
+	Mat dilate_kernel_2 = getStructuringElement(MORPH_RECT, Size(1, 7));
+	dilate(__binary_output_gradient, __binary_output_gradient, dilate_kernel_2);
+
+	Mat labels, stats, centroids;
+	int total_marks =  connectedComponentsWithStats(__binary_output_gradient, labels, stats, centroids);
+	for (int i = 0; i < total_marks; i++)
+	{
+		if ( (stats.at<int>(i, CC_STAT_AREA) / stats.at<int>(i, CC_STAT_HEIGHT) > 20 && stats.at<int>(i, CC_STAT_AREA) > 100 ) ||
+		 (stats.at<int>(i, CC_STAT_HEIGHT) < __min_marking_length && stats.at<int>(i, CC_STAT_TOP)!= 0 && stats.at<int>(i, CC_STAT_TOP) + stats.at<int>(i, CC_STAT_HEIGHT) < warp_row-1) )
+		{
+			for (int j = stats.at<int>(i, CC_STAT_TOP); j < stats.at<int>(i, CC_STAT_TOP) + stats.at<int>(i, CC_STAT_HEIGHT); j++)
+			{
+				for (int k = stats.at<int>(i, CC_STAT_LEFT); k < stats.at<int>(i, CC_STAT_LEFT) + stats.at<int>(i, CC_STAT_WIDTH); k++)
+				{
+					if (labels.at<int>(j, k)== i)
+					{
+						__binary_output_gradient.at<uchar>(j, k) = 0;
+					}
+				}
+			}
+		}
+		else if (stats.at<int>(i, CC_STAT_HEIGHT) < 2*__min_marking_length && stats.at<int>(i, CC_STAT_WIDTH) >= __min_marking_length ) // 80 30
+		{
+			bool bulk = false;
+			for (int j = stats.at<int>(i, CC_STAT_TOP); j < stats.at<int>(i, CC_STAT_TOP) + stats.at<int>(i, CC_STAT_HEIGHT); j++)
+			{
+				int start_line = -1, end_line = -1;
+				for (int k = stats.at<int>(i, CC_STAT_LEFT); k < stats.at<int>(i, CC_STAT_LEFT) + stats.at<int>(i, CC_STAT_WIDTH); k++)
+				{
+					if (labels.at<int>(j, k)== i)
+					{
+						start_line = k;
+						break;
+					}
+				}
+
+				if (start_line + 30 > stats.at<int>(i, CC_STAT_LEFT) + stats.at<int>(i, CC_STAT_WIDTH) )
+					continue;
+				
+				for (int k = stats.at<int>(i, CC_STAT_LEFT) + stats.at<int>(i, CC_STAT_WIDTH) -1; k >= stats.at<int>(i, CC_STAT_LEFT); k--)
+				{
+					if (labels.at<int>(j, k)== i)
+					{
+						end_line = k;
+						break;
+					}
+				}
+
+				if (end_line - start_line >= 30)
+				{
+					bulk = true;
+					break;
+				}
+			}
+			if (bulk)
+			{
+				for (int j = stats.at<int>(i, CC_STAT_TOP); j < stats.at<int>(i, CC_STAT_TOP) + stats.at<int>(i, CC_STAT_HEIGHT); j++)
+				{
+					for (int k = stats.at<int>(i, CC_STAT_LEFT); k < stats.at<int>(i, CC_STAT_LEFT) + stats.at<int>(i, CC_STAT_WIDTH); k++)
+					{
+						if (labels.at<int>(j, k)== i)
+						{
+							__binary_output_gradient.at<uchar>(j, k) = 0;
+						}
+					}
+				}
+			}
+		}
+	}
+
 	#ifndef NDEBUG_GR
-	imshow("binary_output_gradient 2", binary_output_gradient); // two possible values: 0.5 or 1
-	waitKey(0);
+	imshow("__binary_output_gradient 2", __binary_output_gradient);
+	#endif
+
+	// sobelx.setTo(0, ~__binary_output_gradient);
+	// Mat abs_sobelx = abs(sobelx);
+	__binary_output_gradient.convertTo(__binary_output_gradient, binary_output_color.type(), 1.0/255.0 ); // 1.0/(255.0*2)
+
+
+
+
+
+	// ////////////////////////// first version, before 1/9/2018
+	// Mat sobelx, sobely;
+	// Sobel(gray, sobelx, CV_32F, 1, 0, __sobel_kernel_size );
+	// Sobel(gray, sobely, CV_32F, 0, 1, __sobel_kernel_size );
+	
+	// sobelx.copyTo(__sobelx); // for __makeUpFilter
+	
+	// Mat sobel_xp, sobel_xn;
+	// threshold(sobelx, sobel_xp, 0, 1, THRESH_TOZERO);
+	// sobel_xn = -sobelx;
+	// threshold(sobel_xn, sobel_xn, 0, 1, THRESH_TOZERO);
+	
+	// Mat filter_binary_x_p, filter_binary_x_n, __filter_binary_dir;
+	// sobelAbsThresh(sobel_xp, filter_binary_x_p, __abs_x_thresh_pre);
+	// sobelAbsThresh(sobel_xn, filter_binary_x_n, __abs_x_thresh_pre);
+	// sobelDirThresh(sobelx, sobely, __filter_binary_dir, __dir_thresh);
+	
+	// time_t t_temp6 = clock();
+	
+	// filter_binary_x_p = filter_binary_x_p & __filter_binary_dir;
+	// filter_binary_x_n = filter_binary_x_n & __filter_binary_dir;
+	
+	// __filter_binary_x_n = filter_binary_x_n;  // for __makeUpFilter
+	// __filter_binary_x_p = filter_binary_x_p;
+	
+	// int dilate_width = max( (int)round(__window_half_width*0.4),4);
+	// int move_dist = max( (int)round(__window_half_width*0.2),2);
+	
+	// #ifndef NDEBUG_GR
+	// cout << "dilate width: " << dilate_width << endl; // /5
+	// imshow("filter_binary_p", filter_binary_x_p);
+	// imshow("filter_binary_n", filter_binary_x_n);
+	// #endif
+	// Mat filter_binary_p_move(filter_binary_x_p.size(), filter_binary_x_p.type(), Scalar(0));
+	// Mat filter_binary_n_move(filter_binary_x_p.size(), filter_binary_x_p.type(), Scalar(0));
+	// filter_binary_p_move.colRange(move_dist, warp_col) = filter_binary_x_p.colRange(0, warp_col - move_dist) + 0;
+	// filter_binary_n_move.colRange(0, warp_col - move_dist) = filter_binary_x_n.colRange(move_dist, warp_col) + 0;
+	// #ifndef NDEBUG_GR
+	// imshow("filter_binary_p_dilate 1", filter_binary_p_move);
+	// imshow("filter_binary_n_dilate 1", filter_binary_n_move);
+	// cout << "move dist: " << move_dist << endl;
+	// #endif
+	// Mat expand_kernel = getStructuringElement(MORPH_RECT, Size(dilate_width, 1));
+	// dilate(filter_binary_p_move, filter_binary_p_move, expand_kernel);
+	// dilate(filter_binary_n_move, filter_binary_n_move, expand_kernel);
+	// #ifndef NDEBUG_GR
+	// cout << "expand_kernel size: " << expand_kernel.size() << endl;
+	// imshow("filter_binary_p_dilate", filter_binary_p_move);
+	// imshow("filter_binary_n_dilate", filter_binary_n_move);
+	// #endif
+	// /*Mat*/ __binary_output_gradient = filter_binary_p_move & filter_binary_n_move;
+	
+	// #ifndef NDEBUG_GR
+	// imshow("__binary_output_gradient 1", __binary_output_gradient);
+	// #endif
+	
+	// sobelx.setTo(0, ~__binary_output_gradient);
+	// Mat abs_sobelx = abs(sobelx);
+	// __binary_output_gradient.convertTo(__binary_output_gradient, binary_output_color.type(), 0 ); // 1.0/(255.0*2)
+	
+	// Mat sobel_xtop(warp_row, warp_col, CV_32FC1, Scalar(0));
+	// Mat sobel_xbot(warp_row, warp_col, CV_32FC1, Scalar(0));
+	// sobel_xtop.rowRange(0, warp_row/2) = abs_sobelx.rowRange(0, warp_row/2) + 0;
+	// sobel_xbot.rowRange(warp_row/2, warp_row) = abs_sobelx.rowRange(warp_row/2, warp_row) + 0;
+	
+	// Mat filter_binary_x_top, filter_binary_x_bot;
+	// sobelAbsThresh(sobel_xtop, filter_binary_x_top, __abs_x_thresh);
+	// sobelAbsThresh(sobel_xbot, filter_binary_x_bot, __abs_x_thresh);
+	// __binary_output_gradient.setTo(1, filter_binary_x_top | filter_binary_x_bot);
+	
+	// /////////////////////////////////////////////////////////
+
+
+
+	#ifndef NDEBUG_GR
+	imshow("__binary_output_gradient 2", __binary_output_gradient); // two possible values: 0.5 or 1
 	#endif
 	
 	
 	#ifndef NDEBUG
-	imshow("gradient binary", binary_output_gradient);
+	imshow("gradient binary", __binary_output_gradient);
 	//waitKey(0);
 	#endif
 	
 	//Mat mask = binary_output_color <= 0;
-	//binary_output_gradient.setTo(0, mask);
+	//__binary_output_gradient.setTo(0, mask);
 	
 	time_t t_temp7 = clock();
 	
 	/// combine together
 	Mat binary_output_final;
-	addWeighted(binary_output_color, 1, binary_output_gradient, 1, 0, binary_output_final); // four possible values: 0.25, 0.5, 0.75, 1
+	addWeighted(binary_output_color, 1, __binary_output_gradient, 1, 0, binary_output_final); // four possible values: 0.25, 0.5, 0.75, 1
 	
 	minMaxLoc(binary_output_final, NULL, &max_val, NULL, NULL);
 	binary_output_final = binary_output_final*(1/max_val);
@@ -1116,6 +1286,8 @@ void LaneImage::__ROIInds(float half_width, valarray<float>& nonzx, valarray<flo
 		
 		valarray<bool> good_left_inds, good_right_inds;
 
+		float k_left = 0, k_right = 0, b_left = leftx_cur, b_right = rightx_cur;
+
 		for (int i = 0; i < __window_number; i++)
 		{
 			float win_y_low = warp_row - (i+1)*window_height;
@@ -1132,10 +1304,21 @@ void LaneImage::__ROIInds(float half_width, valarray<float>& nonzx, valarray<flo
 			
 			valarray<float> nonzx_cur_left(nonzx[good_left_inds]);
 			valarray<float> nonzx_cur_right(nonzx[good_right_inds]);
-			if (nonzx_cur_left.size() > __window_min_pixel)
-				leftx_cur = nonzx_cur_left.sum()/nonzx_cur_left.size();
-			if (nonzx_cur_right.size() > __window_min_pixel)
-				rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
+			// original method before 01/22/2018
+			// if (nonzx_cur_left.size() > __window_min_pixel)
+			// 	leftx_cur = nonzx_cur_left.sum()/nonzx_cur_left.size();
+			// if (nonzx_cur_right.size() > __window_min_pixel)
+			// 	rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
+			
+			// new method considering scope
+			valarray<float> nonzy_cur_left(nonzy[good_left_inds]);
+			valarray<float> nonzy_cur_right(nonzy[good_right_inds]);
+
+			findWindowPix(nonzx_cur_left, nonzy_cur_left, i, window_height, leftx_cur, __window_min_pixel);
+			findWindowPix(nonzx_cur_right, nonzy_cur_right, i, window_height, rightx_cur, __window_min_pixel);
+			
+			
+			
 		}
 	}
 	else if ( __branch_grow_count > 0) 
@@ -1156,8 +1339,13 @@ void LaneImage::__ROIInds(float half_width, valarray<float>& nonzx, valarray<flo
 				left_lane_inds = left_lane_inds | good_left_inds;
 				
 				valarray<float> nonzx_cur_left(nonzx[good_left_inds]);
-				if (nonzx_cur_left.size() > __window_min_pixel)
-					leftx_cur = nonzx_cur_left.sum()/nonzx_cur_left.size();
+				// // old method before 01/22/2018
+				// if (nonzx_cur_left.size() > __window_min_pixel)
+				// 	leftx_cur = nonzx_cur_left.sum()/nonzx_cur_left.size();
+
+				// new method at 01/22/2018
+				valarray<float> nonzy_cur_left(nonzy[good_left_inds]);
+				findWindowPix(nonzx_cur_left, nonzy_cur_left, i, window_height, leftx_cur, __window_min_pixel);
 			}
 			valarray<float> right_ref = __last_right_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_right_fit[1]*(frow - 1 - nonzy) + __last_right_fit[0];
 			right_ref = (right_ref - fcol/2)*(__k_pitch*(frow - 1 - nonzy) + __b_pitch) + fcol/2;
@@ -1180,8 +1368,12 @@ void LaneImage::__ROIInds(float half_width, valarray<float>& nonzx, valarray<flo
 				right_lane_inds = right_lane_inds | good_right_inds;
 				
 				valarray<float> nonzx_cur_right(nonzx[good_right_inds]);
-				if (nonzx_cur_right.size() > __window_min_pixel)
-					rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
+				// // old method before 01/22/2018
+				// if (nonzx_cur_right.size() > __window_min_pixel)
+				// 	rightx_cur = nonzx_cur_right.sum()/nonzx_cur_right.size();
+				// new method at 01/22/2018
+				valarray<float> nonzy_cur_right(nonzy[good_right_inds]);
+				findWindowPix(nonzx_cur_right, nonzy_cur_right, i, window_height, rightx_cur, __window_min_pixel);
 			}
 			valarray<float> left_ref = __last_left_fit[2]*((frow - 1 - nonzy)*(frow - 1 - nonzy))+__last_left_fit[1]*(frow - 1 - nonzy) + __last_left_fit[0];
 			left_ref = (left_ref - fcol/2)*(__k_pitch*(frow - 1 - nonzy) + __b_pitch) + fcol/2;
@@ -1220,31 +1412,133 @@ void LaneImage::__ROIInds(float half_width, valarray<float>& nonzx, valarray<flo
 	return;
 }
 
-void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty, VehMask& veh_masker)
+void findWindowPix(valarray<float>& nonzx_cur_left, valarray<float>& nonzy_cur_left, int i, float window_height, float& leftx_cur, float __window_min_pixel)
 {
+	int num_left = nonzx_cur_left.size();
+	if (num_left > __window_min_pixel/2 )
+	{
+		int sum_xi_left = nonzx_cur_left.sum();
+		int sum_yi_left = nonzy_cur_left.sum();
+		int sum_xi2_left = pow(nonzx_cur_left, (float)2).sum();
+		int sum_yi2_left = pow(nonzy_cur_left, (float)2).sum();
+		int sum_xiyi_left = (nonzx_cur_left * nonzy_cur_left).sum();
+
+		Mat AtA_left(2, 2, CV_32FC1);
+		AtA_left.at<float>(0, 0) = num_left;
+		AtA_left.at<float>(0, 1) = sum_yi_left;
+		AtA_left.at<float>(1, 0) = sum_yi_left;
+		AtA_left.at<float>(1, 1) = sum_yi2_left;
+		Mat AtA_left_inv = AtA_left.inv();
+
+		float b_left = AtA_left_inv.at<float>(0, 0) * sum_xi_left + AtA_left_inv.at<float>(0, 1) * sum_xiyi_left;
+		float k_left = AtA_left_inv.at<float>(1, 0) * sum_xi_left + AtA_left_inv.at<float>(1, 1) * sum_xiyi_left;
+
+		leftx_cur = k_left * (warp_row - (i + 1.5) * window_height) + b_left;
+	}
+	return;
+}
+
+void LaneImage::__makeUpFilter(bool left, Mat& warped_filter_image_U, vector<Point>& nonz_loc, valarray<float>& nonzx, valarray<float>& nonzy, 
+	int& hist_width, valarray<float>& leftx, valarray<float>& lefty, valarray<float>& rightx, valarray<float>& righty, VehMask& veh_masker, 
+	int& grad_num_left, int& grad_num_right)
+{
+	// new method for makeup 0113
+	int dilate_width = max( (int)round(__window_half_width*0.4),4);
+	int move_dist = max( (int)round(__window_half_width*0.2),2);
+	Mat expand_kernel = getStructuringElement(MORPH_RECT, Size(dilate_width, 1));
+
+	{
+		// Mat sobel_xp, sobel_xn;
+		// threshold(sobelx, sobel_xp, 0, 1, THRESH_TOZERO);
+		// sobel_xn = -sobelx;
+		// threshold(sobel_xn, sobel_xn, 0, 1, THRESH_TOZERO);
+
+		// sobelAbsThresh(sobel_xp, __filter_binary_x_p, __abs_x_thresh_pre);   // relative threshold is not good!!!
+		// sobelAbsThresh(sobel_xn, __filter_binary_x_n, __abs_x_thresh_pre);
+		__filter_binary_x_p = __sobelx > 300;
+		__filter_binary_x_n = -__sobelx > 300;
+		
+		__filter_binary_x_p = __filter_binary_x_p & __filter_binary_dir;
+		__filter_binary_x_n = __filter_binary_x_n & __filter_binary_dir;   // for __makeUpFilter
+
+		cout << "filter_binary_p_2left size: " << __filter_binary_x_p.size() << endl;
+		cout << "move_dist: " << move_dist << ", warp_col: " << warp_col << endl;
+
+		Mat filter_binary_p_2left(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+		Mat filter_binary_n_2left(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+		Mat filter_binary_p_2right(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+		Mat filter_binary_n_2right(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0));
+		
+		filter_binary_p_2right.colRange(move_dist, warp_col) = __filter_binary_x_p.colRange(0, warp_col - move_dist) + 0;
+		filter_binary_p_2left.colRange(0, warp_col - move_dist) = __filter_binary_x_p.colRange(move_dist, warp_col) + 0;
+		filter_binary_n_2right.colRange(move_dist, warp_col) = __filter_binary_x_n.colRange(0, warp_col - move_dist) + 0;
+		filter_binary_n_2left.colRange(0, warp_col - move_dist) = __filter_binary_x_n.colRange(move_dist, warp_col) + 0;
+		
+
+		dilate(filter_binary_p_2right, filter_binary_p_2right, expand_kernel);
+		dilate(filter_binary_p_2left, filter_binary_p_2left, expand_kernel);
+		dilate(filter_binary_n_2right, filter_binary_n_2right, expand_kernel);
+		dilate(filter_binary_n_2left, filter_binary_n_2left, expand_kernel);
+
+		__filter_binary_x_p.setTo(0, filter_binary_n_2left | filter_binary_n_2right);
+		__filter_binary_x_n.setTo(0, filter_binary_p_2left | filter_binary_p_2right);
+		
+	}
+	//////////////////////////////////////////////////////////////////////
+
 	Mat filter_binary_half(__filter_binary_x_p.size(), __filter_binary_x_p.type(), Scalar(0)); // store only one-side-edge
 	if (left)
-		filter_binary_half.colRange(0, warp_col/2) = __filter_binary_x_n.colRange(0, warp_col/2) + 0; // left: bright-to-dark, sobelx is negative
+	{
+		int to_n_count = countNonZero(__filter_binary_x_n.colRange(0, warp_col/2));
+		int to_p_count = countNonZero(__filter_binary_x_p.colRange(0, warp_col/2));
+		if (to_n_count > to_p_count)
+		{
+			filter_binary_half.colRange(0, warp_col/2) = __filter_binary_x_n.colRange(0, warp_col/2) + 0; // left: bright-to-dark, sobelx is negative
+			grad_num_left += to_n_count;
+		}
+		else
+		{
+			filter_binary_half.colRange(0, warp_col/2) = __filter_binary_x_p.colRange(0, warp_col/2) + 0; // left: bright-to-dark, sobelx is negative
+			grad_num_left += to_p_count;
+		}
+	}	
 	else
-		filter_binary_half.colRange(warp_col/2, warp_col) = __filter_binary_x_p.colRange(warp_col/2, warp_col) + 0;
+	{
+		int to_n_count = countNonZero(__filter_binary_x_n.colRange(warp_col/2, warp_col));
+		int to_p_count = countNonZero(__filter_binary_x_p.colRange(warp_col/2, warp_col));
+		if (to_n_count > to_p_count)
+		{
+			filter_binary_half.colRange(warp_col/2, warp_col) = __filter_binary_x_n.colRange(warp_col/2, warp_col) + 0;
+			grad_num_right += to_n_count;
+		}
+		else
+		{
+			filter_binary_half.colRange(warp_col/2, warp_col) = __filter_binary_x_p.colRange(warp_col/2, warp_col) + 0;
+			grad_num_right += to_p_count;
+		}
+	}
+	// new method for makeup 0113
+	__warped_filter_image.setTo(0.5, filter_binary_half);
+	///////////////////////////////
 	
-	__sobelx.setTo(0, ~filter_binary_half); // __sobelx is the original sobelx before this step
+	// original method before 0113
+	// __sobelx.setTo(0, ~filter_binary_half); // __sobelx is the original sobelx before this step
 	
-	__sobelx.setTo(0, veh_masker.warp_veh_mask);
+	// __sobelx.setTo(0, veh_masker.warp_veh_mask);
 
-	Mat abs_sobelx = abs(__sobelx);
+	// Mat abs_sobelx = abs(__sobelx);
 	
-	Mat sobel_xtop(warp_row, warp_col, CV_32FC1, Scalar(0));
-	Mat sobel_xbot(warp_row, warp_col, CV_32FC1, Scalar(0));
-	sobel_xtop.rowRange(0, warp_row/2) = abs_sobelx.rowRange(0, warp_row/2) + 0;
-	sobel_xbot.rowRange(warp_row/2, warp_row) = abs_sobelx.rowRange(warp_row/2, warp_row) + 0;
+	// Mat sobel_xtop(warp_row, warp_col, CV_32FC1, Scalar(0));
+	// Mat sobel_xbot(warp_row, warp_col, CV_32FC1, Scalar(0));
+	// sobel_xtop.rowRange(0, warp_row/2) = abs_sobelx.rowRange(0, warp_row/2) + 0;
+	// sobel_xbot.rowRange(warp_row/2, warp_row) = abs_sobelx.rowRange(warp_row/2, warp_row) + 0;
 	
-	Mat filter_binary_x_top, filter_binary_x_bot;
-	sobelAbsThresh(sobel_xtop, filter_binary_x_top, __abs_x_thresh);
-	sobelAbsThresh(sobel_xbot, filter_binary_x_bot, __abs_x_thresh);
-	__warped_filter_image.setTo(0.5, filter_binary_x_top | filter_binary_x_bot);
+	// Mat filter_binary_x_top, filter_binary_x_bot;
+	// sobelAbsThresh(sobel_xtop, filter_binary_x_top, __abs_x_thresh);
+	// sobelAbsThresh(sobel_xbot, filter_binary_x_bot, __abs_x_thresh);
+	// __warped_filter_image.setTo(0.5, filter_binary_x_top | filter_binary_x_bot);
 
-	// __warped_filter_image.setTo(0, veh_masker.warp_veh_mask);
+	// // __warped_filter_image.setTo(0, veh_masker.warp_veh_mask);
 	
 	#ifndef NDEBUG
 	imshow("overall binary make-up", __warped_filter_image);

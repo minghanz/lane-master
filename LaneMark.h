@@ -64,7 +64,7 @@ public:
 	void recordImgFit(LaneImage& lane_find_image);
 	void recordBestFit(Line& left_lane, Line& right_lane);
 	void recordHistFit();
-	void drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& plot_pts_r, VanPt& van_pt, LaneImage& lane_find_image);
+	void drawOn(Mat& newwarp, VanPt& van_pt, LaneImage& lane_find_image, ofstream& pointfile);
 };
 
 void recordHistFit_(vector<Vec3f>& hist_fit, Vec3f& avg_hist_fit, Vec3f& new_fit, int& pos_of_renew_fit, bool initial_frame); // have delay of three

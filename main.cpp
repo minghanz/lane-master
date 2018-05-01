@@ -8,8 +8,6 @@
 
 #include "macro_define.h"
 
-#include "alglib/interpolation.h"
-
 #include <ctime>
 
 using namespace std;
@@ -32,7 +30,9 @@ int main(int argc, char** argv)
 	float alpha_w, alpha_h; // horizontal and vertical angle of view
 
 	char cam_mtx_param[200], dist_coeff_param[200], van_param_s[200];
-	ifstream cali_file("../prj_cali/calib_red_mkz_webcam.txt");
+	// ifstream cali_file("../prj_cali/calib_red_mkz_webcam.txt");
+	// ifstream cali_file("../prj_cali/calib_red_mkz_webcam_mcity.txt");
+	ifstream cali_file("../prj_cali/calib_white_mkz_pointgrey.txt");
 	cali_file.getline(cam_mtx_param, 200);
 	cali_file.getline(dist_coeff_param, 200);
 	cali_file.getline(van_param_s, 200);
@@ -47,36 +47,37 @@ int main(int argc, char** argv)
 	}
 	if (cali)
 	{
-		/// initialize for camera calibration
-		vector<vector<Point3f> > obj_pts;
-		vector<vector<Point2f> > img_pts;
-		Size image_size;
-		cameraCalibration(obj_pts, img_pts, image_size, 6, 9);
+		//  initialize for camera calibration
+		// vector<vector<Point3f> > obj_pts;
+		// vector<vector<Point2f> > img_pts;
+		// Size image_size;
+		// cameraCalibration(obj_pts, img_pts, image_size, 6, 9);
 		
-		vector<Mat> rvecs, tvecs;
-		calibrateCamera(obj_pts, img_pts, image_size, cam_mtx, dist_coeff, rvecs, tvecs);
+		// vector<Mat> rvecs, tvecs;
+		// calibrateCamera(obj_pts, img_pts, image_size, cam_mtx, dist_coeff, rvecs, tvecs);
 
-		// sscanf(cam_mtx_param, "%lf %lf %lf %lf", &cam_mtx.at<double>(0, 0), &cam_mtx.at<double>(1, 1), &cam_mtx.at<double>(0, 2), &cam_mtx.at<double>(1, 2));
+		sscanf(cam_mtx_param, "%lf %lf %lf %lf", &cam_mtx.at<double>(0, 0), &cam_mtx.at<double>(1, 1), &cam_mtx.at<double>(0, 2), &cam_mtx.at<double>(1, 2));
+		cam_mtx.at<double>(2, 2) = 1;
 		
-		// vector<double> dist_coeff_vec;
-		// for (int i = 0, j = 0; i < strlen(dist_coeff_param); i++)
-		// {
-		// 	if (dist_coeff_param[i] == ' ')
-		// 	{
-		// 		double temp_param;
-		// 		string temp(dist_coeff_param + j, i - j);
-		// 		stringstream ss;
-		// 		ss << temp;
-		// 		ss >> temp_param;
-		// 		dist_coeff_vec.push_back(temp_param);
-		// 		j = i+1;
-		// 	}
-		// }
-		// dist_coeff = Mat(1, dist_coeff_vec.size(), CV_64FC1);
-		// for (int i = 0; i < dist_coeff_vec.size(); i++)
-		// {
-		// 	dist_coeff.at<double>(i) = dist_coeff_vec[i];
-		// }
+		vector<double> dist_coeff_vec;
+		for (int i = 0, j = 0; i < strlen(dist_coeff_param); i++)
+		{
+			if (dist_coeff_param[i] == ' ')
+			{
+				double temp_param;
+				string temp(dist_coeff_param + j, i - j);
+				stringstream ss;
+				ss << temp;
+				ss >> temp_param;
+				dist_coeff_vec.push_back(temp_param);
+				j = i+1;
+			}
+		}
+		dist_coeff = Mat(1, dist_coeff_vec.size(), CV_64FC1);
+		for (int i = 0; i < dist_coeff_vec.size(); i++)
+		{
+			dist_coeff.at<double>(i) = dist_coeff_vec[i];
+		}
 		
 		cout << "cameraMatrix: " << cam_mtx << endl;
 		cout << "dist_coeff: " << dist_coeff << endl;
@@ -115,11 +116,13 @@ int main(int argc, char** argv)
 	import(argc, argv, file_name, image, reader, writer, msc, ispic, video_length);
 	cout << "Set time interval: [" << msc[0] <<", "<< msc[1] << "]" << endl;
 	ofstream outfile("yaw angle.txt");
+	ofstream pointfile("lane_points.txt");
 	
 	/// initialize parameters that work cross frames 
 	clock_t t_start = clock();
 	float time_step = msc[0]; 		// counting frames, fed to LaneImage(__nframe)
 	img_size = Size(reader.get(CV_CAP_PROP_FRAME_WIDTH), reader.get(CV_CAP_PROP_FRAME_HEIGHT));
+	cout << "img_size: " << img_size << endl;
 
 	Line left_lane, right_lane;
 	VanPt van_pt(alpha_w, alpha_h, van_param);
@@ -135,31 +138,7 @@ int main(int argc, char** argv)
 	float illu_comp = 1;
 	// int nframe = msc[0];
 	
-	#ifdef EVA
-	/// for evaluate
-	vector<float> out_rate;
-	vector<float> error_rate;
-	float out_rate_cur, error_accu;
-	float fail_count = 0, fail_rate;
-	float tp_count = 0, pos_count = 0; // number of frames that output a result
-	float fp_count = 0, neg_count = 0;
-	double truth_y[5];
-	ifstream pt_file[5];
-	for (int i = 0; i < 5; i++)
-	{
-		char pt_file_name[50];
-		sprintf(pt_file_name,"row%d.txt",i+1);
-		pt_file[i].open(pt_file_name);
-		if (!pt_file[i])
-		{
-			cout << "Error: Open file " << pt_file_name << endl;
-			return -1;
-		}
-		string lineread;
-		getline(pt_file[i], lineread);
-		sscanf(lineread.c_str(), "%lf", truth_y + i);
-		//getline(pt_file[i], lineread);
-	}
+	#ifdef EVA // 1st paragraph
 	#endif
 	
 	while (reader.isOpened())
@@ -184,10 +163,10 @@ int main(int argc, char** argv)
 				image.copyTo(cali_image);
 			} // not copied
 
-			imshow("image", image);
-			waitKey(0);
+			// imshow("image", image);
+			// waitKey(0);
 			imshow("cali_image", cali_image);
-			waitKey(0);
+			// waitKey(0);
 
 			#ifndef NDEBUG
 			// cout << "cali image size" << cali_image.size() << endl;
@@ -302,155 +281,18 @@ int main(int argc, char** argv)
 
 			if ( lane_mark.new_result ) // current frame succeeds
 			{
-				vector<Point> plot_pts_l, plot_pts_r;
-				lane_mark.drawOn(newwarp, plot_pts_l, plot_pts_r, van_pt, lane_find_image);
+				pointfile << time_step << " ";
+				lane_mark.drawOn(newwarp, van_pt, lane_find_image, pointfile);
 
-				#ifdef EVA
-				/// evaluate the result quantitatively
-				//if ( (time_step >= 46 && time_step <= 55) || (time_step >= 123 && time_step <= 145) || (time_step >= 214 && time_step <= 224) || (time_step >= 343 && time_step <= 362) )
-				if ( (time_step >= 70 && time_step <= 79) || (time_step >= 133 && time_step <= 138) || (time_step >= 242 && time_step <= 246) )
-				{ // false positive
-					out_rate_cur = 0;
-					error_accu = 0;
-					
-					fp_count ++;
-					neg_count ++;
-				}
-				//else if ((time_step >= 39 && time_step <= 45) || (time_step >= 56 && time_step <= 57) ||(time_step >= 112 && time_step <= 122) ||
-				//		(time_step >= 146 && time_step <= 152) ||(time_step >= 210 && time_step <= 213) ||(time_step >= 338 && time_step <= 342) ||(time_step >= 363 && time_step <= 365) )
-				else if((time_step >= 62 && time_step <= 69) || (time_step >= 126 && time_step <= 132) || (time_step >= 139 && time_step <= 139) || (time_step >= 229 && time_step <= 241) )
-				{ // not counted as positive or negative (just ignore)
-					//string txtline;
-					//for (int i = 0; i < 5; i++)
-					//{
-						//getline(pt_file[i],txtline);
-					//}
-					out_rate_cur = 0;
-					error_accu = 0;
-				}
-				else
-				{ // true positive
-					Mat warp_zero_lr(Size(warp_col, warp_row), CV_8UC1, Scalar(0));
-					vector<vector<Point> > plot_pts_vec_lr;
-					plot_pts_vec_lr.push_back(plot_pts_l);
-					plot_pts_vec_lr.push_back(plot_pts_r);
-					polylines(warp_zero_lr, plot_pts_vec_lr, false, Scalar(255) );
-					
-					vector<Point> result_nzo;
-					Mat newwap_binary;
-					warpPerspective(warp_zero_lr, newwap_binary, van_pt.inv_per_mtx, image.size() );
-					findNonZero(newwap_binary, result_nzo);
-					
-					//imshow("binary bird", warp_zero_lr);
-					//imshow("binary lane", newwap_binary);
-					double truth_x_left[5], truth_x_right[5];
-					string txtline;
-					for (int i = 0; i < 5; i++)
-					{
-						getline(pt_file[i],txtline);
-						sscanf(txtline.c_str(), "%lf %lf", truth_x_left+i, truth_x_right+i);
-						circle(newwarp, Point(truth_x_left[i], truth_y[i]), 7, Scalar(0, 0, 255), -1 );
-						circle(newwarp, Point(truth_x_right[i], truth_y[i]), 7, Scalar(0, 0, 255), -1 ); // 3
-					}
-					
-					//cout << "truth x left: " << truth_x_left[0] << truth_x_left[1] << truth_x_left[2] << truth_x_left[3] << truth_x_left[4] << endl;
-					//cout << "truth x right: " << truth_x_right[0] << truth_x_right[1] << truth_x_right[2] << truth_x_right[3] << truth_x_right[4] << endl;
-					//cout << "truth y: " << truth_y[0] << truth_y[1] << truth_y[2] << truth_y[3] << truth_y[4] << endl;
-					
-					//BSpline<float> spline_l(truth_y, 5, truth_x_left, 0);
-					//BSpline<float> spline_r(truth_y, 5, truth_x_right, 0);
-					alglib::real_1d_array truth_xx_left;
-					alglib::real_1d_array truth_xx_right;
-					alglib::real_1d_array truth_yy;
-					truth_xx_left.setcontent(5, truth_x_left);
-					truth_xx_right.setcontent(5, truth_x_right);
-					truth_yy.setcontent(5, truth_y);
-					
-					alglib::spline1dinterpolant spline_l, spline_r;
-					alglib::spline1dbuildcubic(truth_yy, truth_xx_left, spline_l);
-					alglib::spline1dbuildcubic(truth_yy, truth_xx_right, spline_r);				
-						int out_count = 0; 
-						error_accu = 0;
-						for (int i = 0; i < result_nzo.size(); i++)
-						{
-							//float x_eva_l = spline_l.evaluate((float)(result_nzo[i].y));
-							//float x_eva_r = spline_r.evaluate((float)(result_nzo[i].y));
-							double x_eva_l = alglib::spline1dcalc(spline_l, result_nzo[i].y);
-							double x_eva_r = alglib::spline1dcalc(spline_r, result_nzo[i].y);
-							
-							if ( abs(x_eva_l - result_nzo[i].x) < abs(x_eva_r - result_nzo[i].x) )
-							{
-								circle(newwarp, Point(x_eva_l, result_nzo[i].y), 4, Scalar(0, 0, 255), -1 ); // 1
-								//cout << "Left: " << x_eva_l << ", detect: " << result_nzo[i].y << endl;
-								//cout << "Error: " << abs(x_eva_l - result_nzo[i].x)  << ", thresh: " << (3.0686*result_nzo[i].y - 1289.6)*(0.2+0.1*(truth_y[4]-result_nzo[i].y)/(truth_y[4]-truth_y[0]) )<< endl;
-								float error_cur = abs(x_eva_l - result_nzo[i].x)/(1.4876*result_nzo[i].y - 256.6);
-								error_accu += error_cur;
-								if ( error_cur >  0.1 ) //(0.1+0.05*(truth_y[4]-result_nzo[i].y)/(truth_y[4]-truth_y[0]) )  )
-								{
-									out_count++;
-								}
-							}
-							else
-							{
-								circle(newwarp, Point(x_eva_r, result_nzo[i].y), 4, Scalar(0, 0, 255), -1 ); // 1
-								//cout << "Right: " << x_eva_r << ", detect: " << result_nzo[i].y << endl;
-								//cout << "Error: " << abs(x_eva_r - result_nzo[i].x)  << ", thresh: " << (3.0686*result_nzo[i].y - 1289.6)*(0.2+0.1*(truth_y[4]-result_nzo[i].y)/(truth_y[4]-truth_y[0]) )<< endl;
-								float error_cur = abs(x_eva_r - result_nzo[i].x)/(1.4876*result_nzo[i].y - 256.6);
-								error_accu += error_cur;
-								if ( error_cur > 0.1 )//(0.1+0.05*(truth_y[4]-result_nzo[i].y)/(truth_y[4]-truth_y[0]) )  )
-								{
-									out_count++;
-								}
-							}
-						}
-						out_rate_cur = (float)out_count / result_nzo.size();
-						out_rate.push_back(out_rate_cur);
-						error_accu = error_accu / result_nzo.size();
-						error_rate.push_back(error_accu);
-						if (out_rate_cur > 0.2)
-							fail_count++;
-						tp_count ++;
-						pos_count++;
-					cout << "out_rate: " << out_rate_cur << endl;
-				}
-				
-				cout << "fail frames: " << fail_count <<  ", total frames: " << tp_count << endl;
-				/// ////////////////////////////////////////////////////////////////////////////
+				#ifdef EVA // 2nd paragraph
 				#endif
 			}
-			#ifdef EVA
-			else
-			{ // true or false negative
-				out_rate_cur = 0;
-				error_accu = 0;
-				//if ( (time_step >= 46 && time_step <= 55) || (time_step >= 123 && time_step <= 145) || (time_step >= 214 && time_step <= 224) || (time_step >= 343 && time_step <= 362) )
-				if ( (time_step >= 70 && time_step <= 79) || (time_step >= 133 && time_step <= 138) || (time_step >= 242 && time_step <= 246) )
-				{
-					neg_count ++;
-				}
-				else if((time_step >= 62 && time_step <= 69) || (time_step >= 126 && time_step <= 132) || (time_step >= 139 && time_step <= 139) || (time_step >= 229 && time_step <= 241) )
-				{
-					//string txtline;
-					//for (int i = 0; i < 5; i++)
-					//{
-						//getline(pt_file[i],txtline);
-					//}
-				}
-				else
-				{
-					pos_count++;
-					string txtline;
-					for (int i = 0; i < 5; i++)
-					{
-						getline(pt_file[i],txtline);
-					}
-				}
-			}
+			#ifdef EVA // 3rd paragraph
 			#endif
 				
 			#ifdef DRAW
 			/// add results on calibrated image, output the frame
-			addWeighted(cali_image, 1, newwarp, 0.3, 0, result);
+			addWeighted(cali_image, 0.8, newwarp, 0.3, 0, result);
 			//// circle(result, lane_find_image.__best_van_pt, 5, Scalar(0, 0, 255), -1); // should be the same as Point(last_van_pt)
 			Scalar van_color = van_pt.ini_success ? Scalar(0,0,255) : Scalar(0,255,0);
 			circle(result, Point(van_pt.van_pt_ini), 3, van_color, -1); // should be the same as Point(last_van_pt)
@@ -510,11 +352,11 @@ int main(int argc, char** argv)
 				cout << "lateral offset right: " << right_lane.best_line_base_pos << endl;
 				#endif
 				
-				// string Text1 = "Frame " + to_string((int)time_step);
+				string Text1 = "Frame " + to_string((int)time_step);
 				// string Text2 = "Hist width: " + x2str(lane_mark.hist_width) + ", min width: " + x2str(lane_find_image.__min_width_warp) + ", width: " + x2str(lane_find_image.__bot_width);
 				// string Text3 = "L: cur diff: " + x2str(left_lane.current_diff) + ", mean diff: " + x2str(left_lane.mean_hist_diff) +  ", base_fluc: " + x2str(left_lane.base_fluctuation) + ", w: " + x2str(left_lane.__w_current);
 				// string Text4 = "R: cur diff: " + x2str(right_lane.current_diff) + ", mean diff: " + x2str(right_lane.mean_hist_diff) +  ", base_fluc: " + x2str(right_lane.base_fluctuation) + ", w: " + x2str(right_lane.__w_current);
-				// putText(result, Text1, Point(10, 40), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
+				putText(result, Text1, Point(10, 40), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA); //Point(image.cols/10, 40)
 				// putText(result, Text2, Point(10, 60), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
 				// putText(result, Text3, Point(10, 80), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
 				// putText(result, Text4, Point(10, 100), fontFace, fontScale, Scalar(0,0,200), thickness, LINE_AA); //Point(image.cols/10, 40)
@@ -552,28 +394,13 @@ int main(int argc, char** argv)
 		}
 		else
 		{
-			#ifdef EVA
-			float total_error = 0;
-			float total_out = 0;
-			for (int i = 0; i < error_rate.size(); i++)
-			{
-				total_error += error_rate[i];
-			}
-			for (int i = 0; i < out_rate.size(); i++)
-			{
-				total_out += out_rate[i];
-			}
-			total_error = total_error / error_rate.size();
-			total_out = total_out / out_rate.size();
-			
-			cout << "avg error is: " << total_error << endl;
-			cout << "avg outrate is: " << total_out << endl;
-			
+			#ifdef EVA // 4th paragraph			
 			#endif
 			cout << "total process time: " << to_string(((float)(clock() - t_start))/CLOCKS_PER_SEC) << "s" << endl;
 			break;
 		}
 	}
 	outfile.close();
+	pointfile.close();
 	return 0;
 }

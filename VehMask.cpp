@@ -109,7 +109,7 @@ VehMask::VehMask() // : tracker(TrackerMIL::create())
     ori_veh_mask = Mat(img_size, CV_8UC1, Scalar(0));
 
     #ifndef HIGH_BOT
-    sub_img_top = img_size.height*0.5;
+    sub_img_top = img_size.height*0.2;
     sub_img_bot = img_size.height;
 	#else
 	sub_img_top = img_size.height*0.3;

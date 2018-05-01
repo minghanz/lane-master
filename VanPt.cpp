@@ -3,11 +3,13 @@
 #include "Line.hpp"
 #include "LaneMark.h"
 
+
 VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alpha_w), ALPHA_H(alpha_h), chnl_thresh(vector<int>(6, 0))
 {
 	#ifndef HIGH_BOT
 	y_bottom_warp = min(img_size.height * 14/15, img_size.height -1 );
 	y_bottom_warp_max = y_bottom_warp;
+
 	#else
 	y_bottom_warp = min(img_size.height *7/10, img_size.height -1 );  // for caltech data
 	y_bottom_warp_max = y_bottom_warp;
@@ -43,26 +45,49 @@ VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alp
 		float cam_height = axis_dist * sin(theta_h_cali);
 
 		float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
-		float warp_pix_per_cm = warp_col / real_width_bottom;
-		min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
+		//// old method before 01/21/2018
+		// float warp_pix_per_cm = warp_col / real_width_bottom;
+		// min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
+
+		// cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
+		// cout << "real_width_bottom: " << real_width_bottom << endl;
+		// // getchar();
+		// int corr_width = min(0.55*real_width_bottom, (double)warp_col-10);
+		// margin_side = (warp_col - corr_width)/2;
+		// // margin_side = warp_col/6;
+		// min_width_pixel_warp = warp_col/6;
+
+		// new method to fix the width correspondence in warp img
+		float warp_real_width = 2.5*370.0;   // let the warp_img contain 2.5 standard lane width (3.7m/lane)
+		float warp_pix_per_cm = warp_col/warp_real_width;	
+		min_width_pixel_warp = warp_pix_per_cm*200; // set min_lane_width as 2m
+		int corr_width = warp_col * real_width_bottom/warp_real_width;
+		margin_side = (warp_col - corr_width)/2;
+
+		float warp_dist = real_width_bottom/2 / (tan(alpha_w)/6.0);
+		float warp_pix_per_m_long = warp_row/warp_dist*100;
+		min_length_pixel_warp = warp_pix_per_m_long*2.5; // set min lane marking length as 2.5m (3m standard)
 
 		cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
 		cout << "real_width_bottom: " << real_width_bottom << endl;
-		getchar();
-		int corr_width = min(0.55*real_width_bottom, (double)warp_col-10);
-		margin_side = (warp_col - corr_width)/2;
-		margin_side = warp_col/6;
-		min_width_pixel_warp = warp_col/6;
+		cout << "warp_dist: " <<  warp_dist << ", min_length_pixel_warp: " << min_length_pixel_warp << endl;
 	}
 	else
 	{
-		van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye for new data in Mcity
+		// van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye for new data in Mcity
+		van_pt_ini = Point2f(img_size.width/2, img_size.height/2);
 		van_pt_cali = van_pt_ini; 
 		theta_w = 0; 	// yaw angle 
 		theta_h = 0;	// pitch angle
 
+		// int corr_width = pow(img_size.width/640., 0.3)*warp_col*2./3.;
+		// min_width_pixel_warp = warp_col/6*pow(img_size.width/640., 0.3);
+		// margin_side = (warp_col - corr_width)/2; // warp_col/6;
+
 		min_width_pixel_warp = warp_col/6;
 		margin_side = warp_col/6;
+
+		min_length_pixel_warp = 30;
 	}
 	
 
@@ -314,10 +339,10 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 		#endif
 	}
 	#ifdef DRAW
-	float gamma_dist = line_gamma_dist;
-	float c_dist = line_c_dist;
-	circle(vote_lines_img, Point(van_pt_ini), (int)c_dist, Scalar(255,0,0));
-	circle(vote_lines_img, Point(van_pt_ini), (int)c_dist + (int)(1/gamma_dist), Scalar(255,0,0));
+	// float gamma_dist = line_gamma_dist;
+	// float c_dist = line_c_dist;
+	// circle(vote_lines_img, Point(van_pt_ini), (int)c_dist, Scalar(255,0,0));
+	// circle(vote_lines_img, Point(van_pt_ini), (int)c_dist + (int)(1/gamma_dist), Scalar(255,0,0));
 	#endif
 
 	if (valid_lines_idx_left.size() <= 0 || valid_lines_idx_right.size() <= 0)
@@ -361,7 +386,7 @@ bool VanPt::edgeVote(Mat image, Mat edges)
 			#ifdef DRAW
 			line(vote_lines_img, Point(xl1,yl1), Point(xl2, yl2), Scalar(0,0,255),1); // comment to remove the lines voting for van_pt
 			line(vote_lines_img, Point(xr1,yr1), Point(xr2, yr2), Scalar(0,0,255),1);
-			circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1); // it makes the image not clean
+			// circle(vote_lines_img, Point(xp,yp), 2, Scalar(0,255,0), -1); // it makes the image not clean
 			#endif
 			line(valid_lines_map, Point(xl1,yl1), Point(xl2, yl2), Scalar(255),1);
 		}
@@ -561,7 +586,7 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	#ifdef DRAW
 	// circle(vote_lines_img, Point(van_pt_obsv), max(0, (int)van_pt_mse), Scalar(0,0,255)); // indicating the variance of this estimation
 	circle(vote_lines_img, Point(van_pt_obsv), 3, Scalar(0,0,255), -1);
-	rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0)); // showing conf_dist
+	// rectangle(vote_lines_img, Point(ref_pt.x - c_x, ref_pt.y - c_y), Point(ref_pt.x + c_x, ref_pt.y + c_y), Scalar(255,0,0)); // showing conf_dist
 	cout << "first draw finished. " << endl;
 	#endif
 
@@ -577,7 +602,7 @@ float VanPt::getConfidence(const vector<Point2f>& van_pt_candi, const vector<flo
 	putText(vote_lines_img, Text3, Point(10, 120), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 	putText(vote_lines_img, Text4, Point(270, 60), fontFace, fontScale, Scalar(0,0,255), thickness, LINE_AA);
 
-	// imshow("vote_lines_img", vote_lines_img);
+	imshow("vote_lines_img", vote_lines_img);
 
 	return filter_confidence;
 

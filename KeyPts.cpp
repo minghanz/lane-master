@@ -255,7 +255,7 @@ void selectPt(Mat& lane_window_side, Mat& lane_out_img_copy, vector<Point>& plot
 	if (plot_pts_warp[start_y].x >= 0 && plot_pts_warp[start_y].x < warp_col )
 		near_nonznum[start_y] = countNonZero(lane_window_side(Range(plot_pts_warp[start_y].y, plot_pts_warp[start_y].y + 1), Range(max(plot_pts_warp[start_y].x - 5, 0), min(plot_pts_warp[start_y].x + 5, warp_col))));
 
-	cout << "near_nonznum init" << endl;
+	// cout << "near_nonznum init" << endl;
 	
 	Point cache_point(0, 0);
     Vec4f cur_marking(-1, -1, -1, -1);
@@ -409,8 +409,8 @@ void match_side(vector<Vec4f>& markings, vector<Vec4f>& markings_last, bool matc
     int match_num = match_from.size();
     match_or_not = false;
 
-    cout << "match_from_new: " << match_from_new << endl;
-    cout << "match_num: " << match_num << endl;
+    // cout << "match_from_new: " << match_from_new << endl;
+    // cout << "match_num: " << match_num << endl;
 
 
     if (match_num >= 2)
@@ -427,7 +427,7 @@ void match_side(vector<Vec4f>& markings, vector<Vec4f>& markings_last, bool matc
                         continue;
                 }
                 float dis_sim = match_eval(match_from[i], match_to[j], match_from_new);
-                cout << "dis_sim-" << i << ": " << dis_sim << endl;
+                // cout << "dis_sim-" << i << ": " << dis_sim << endl;
                 if (dis_sim < cur_min_dis)
                 {
                     cur_min_dis = dis_sim;
@@ -439,12 +439,12 @@ void match_side(vector<Vec4f>& markings, vector<Vec4f>& markings_last, bool matc
                 }
             }
         }
-        cout << "match_to_idx: " ;
-        for (int i = 0; i < match_to_idx.size(); i++)
-        {
-            cout << match_to_idx[i] << " ";
-        }
-        cout << endl;
+        // cout << "match_to_idx: " ;
+        // for (int i = 0; i < match_to_idx.size(); i++)
+        // {
+        //     cout << match_to_idx[i] << " ";
+        // }
+        // cout << endl;
 
         coord_new = Mat(2*match_num, 2, CV_32FC1, Scalar(0));
         coord_last = Mat(2*match_num, 2, CV_32FC1, Scalar(0));
@@ -505,11 +505,11 @@ void match_side(vector<Vec4f>& markings, vector<Vec4f>& markings_last, bool matc
         coord_last.resize(cur_row);
         coord_new = coord_new.t();
         coord_last = coord_last.t();
-        cout << "cur_row: " << cur_row << endl;
-        if (cur_row >= 3)
-        {
-            match_or_not = true;
-        }
+        // cout << "cur_row: " << cur_row << endl;
+        // if (cur_row >= 3)
+        // {
+        //     match_or_not = true;
+        // }
     }
 }
 
@@ -522,7 +522,7 @@ float match_eval(Vec4f& from, Vec4f& to, bool match_from_new)
     int p_3 = (vec_new[3] == -1 || vec_old[3] == -1) ? 0 : 1;
     
     float margin = max(10.0, 0.25 * (vec_new[3]- vec_new[1]) ); 
-    cout << "new-out: " << vec_new[1] - vec_old[1] << " " << vec_new[3] - vec_old[3] << endl;
+    // cout << "new-out: " << vec_new[1] - vec_old[1] << " " << vec_new[3] - vec_old[3] << endl;
     bool wrong_indicator = (vec_new[1] - vec_old[1] + margin )*p_1 <= 0 && (vec_new[3] - vec_old[3] + margin  )*p_3 <= 0 ; // a margin is applied
     
     float disparity = (vec_new[1] - vec_old[1])*(vec_new[1] - vec_old[1])*p_1*(2-p_3) + (vec_new[3] - vec_old[3])*(vec_new[3] - vec_old[3])*p_3*(2-p_1);

@@ -177,53 +177,124 @@ float getLaneWidthWarp(Vec3f left_fit, Vec3f right_fit)
 	return mean_dist;
 }
 
-
-void LaneMark::drawOn(Mat& newwarp, vector<Point>& plot_pts_l, vector<Point>& plot_pts_r, VanPt& van_pt, LaneImage& lane_find_image)
-{
-	Size warp_size = Size(warp_col, warp_row);
-	Mat warp_zero(warp_size, CV_8UC3, Scalar(0, 0, 0));
-	vector<Point> plot_pts;
-	plot_pts.reserve(2 * warp_row);
-	plot_pts_l.reserve(warp_row);
-	plot_pts_r.reserve(warp_row);
+// old version before 02/16, the points are sampled at every row, and warpPerspective after fillPoly, only draw points in warp image
+// void LaneMark::drawOn(Mat& newwarp, vector<Point2f>& plot_pts_l, vector<Point2f>& plot_pts_r, VanPt& van_pt, LaneImage& lane_find_image)
+// {
+// 	Size warp_size = Size(warp_col, warp_row);
+// 	Mat warp_zero(warp_size, CV_8UC3, Scalar(0, 0, 0));
+// 	vector<Point> plot_pts;
+// 	plot_pts.reserve(2 * warp_row);
+// 	plot_pts_l.reserve(warp_row);
+// 	plot_pts_r.reserve(warp_row);
 	
-	for (int i = 0; i < warp_row; i++)
+// 	for (int i = 0; i < warp_row; i++)
+// 	{
+// 		Point left;
+// 		left.x = left_fit_best[2]*i*i + left_fit_best[1]*i + left_fit_best[0];
+// 		left.y = warp_row - 1 - i; // from downside
+// 		if (left.x >= 0 && left.y >= 0 && left.x <warp_size.width  && left.y < warp_size.height)
+// 		{
+// 			plot_pts.push_back(left);
+// 			plot_pts_l.push_back(left);
+// 		}
+// 	}
+// 	for (int i = warp_row-1; i >= 0; i--)
+// 	{
+// 		Point right;
+// 		right.x = right_fit_best[2]*i*i + right_fit_best[1]*i + right_fit_best[0];
+// 		right.y = warp_row - 1 - i; // from downside
+// 		if (right.x >= 0 && right.y >= 0 && right.x <warp_size.width  && right.y < warp_size.height)
+// 		{
+// 			plot_pts.push_back(right);
+// 			plot_pts_r.push_back(right);
+// 		}
+// 	}
+	
+// 	vector<vector<Point> > plot_pts_vec;
+// 	plot_pts_vec.push_back(plot_pts);
+// 	if (left_fit_w * right_fit_w == 0 ) // || left_fit == Vec3f(0, 0, 0) || right_fit == Vec3f(0, 0, 0)
+// 		fillPoly(warp_zero, plot_pts_vec, Scalar(255, 0, 0) );
+// 	else if ( left_fit_w < 0.1 || right_fit_w < 0.1 )
+// 		fillPoly(warp_zero, plot_pts_vec, Scalar(150, 150, 0) );
+// 	else
+// 		fillPoly(warp_zero, plot_pts_vec, Scalar(0, 255, 0) );
+		
+// 	Mat newwarp_lanemark(newwarp.size(), CV_8UC3, Scalar(0,0,0));
+// 	if (abs(lane_find_image.__k_pitch) > 2e-5 && (!lane_find_image.__split)) // pitch angle compensation
+// 	{
+// 		warpPerspective(warp_zero, warp_zero, lane_find_image.__inv_per_mtx_comp, warp_size );
+// 	}
+// 	warpPerspective(warp_zero, newwarp_lanemark, van_pt.inv_per_mtx, img_size );
+// 	newwarp = newwarp + newwarp_lanemark;
+// }
+
+void LaneMark::drawOn(Mat& newwarp, VanPt& van_pt, LaneImage& lane_find_image, ofstream& pointfile)
+{
+	vector<Point2f> plot_pts;
+	int step = 10;
+	plot_pts.reserve(2 * warp_row/ step + 2);
+	
+	// generate sample points
+	for (int i = 0; i <= warp_row; i+= step)
 	{
 		Point left;
 		left.x = left_fit_best[2]*i*i + left_fit_best[1]*i + left_fit_best[0];
 		left.y = warp_row - 1 - i; // from downside
-		if (left.x >= 0 && left.y >= 0 && left.x <warp_size.width  && left.y < warp_size.height)
-		{
-			plot_pts.push_back(left);
-			plot_pts_l.push_back(left);
-		}
+		plot_pts.push_back(left);
 	}
-	for (int i = warp_row-1; i >= 0; i--)
+	int left_num = plot_pts.size();
+	for (int i = warp_row; i >= 0; i-= step)
 	{
 		Point right;
 		right.x = right_fit_best[2]*i*i + right_fit_best[1]*i + right_fit_best[0];
-		right.y = warp_row - 1 - i; // from downside
-		if (right.x >= 0 && right.y >= 0 && right.x <warp_size.width  && right.y < warp_size.height)
-		{
-			plot_pts.push_back(right);
-			plot_pts_r.push_back(right);
-		}
+		right.y = warp_row - 1 - i; // from upside
+		plot_pts.push_back(right);
 	}
-	
-	vector<vector<Point> > plot_pts_vec;
-	plot_pts_vec.push_back(plot_pts);
-	if (left_fit_w * right_fit_w == 0 ) // || left_fit == Vec3f(0, 0, 0) || right_fit == Vec3f(0, 0, 0)
-		fillPoly(warp_zero, plot_pts_vec, Scalar(255, 0, 0) );
-	else if ( left_fit_w < 0.1 || right_fit_w < 0.1 )
-		fillPoly(warp_zero, plot_pts_vec, Scalar(150, 150, 0) );
-	else
-		fillPoly(warp_zero, plot_pts_vec, Scalar(0, 255, 0) );
-		
-	Mat newwarp_lanemark(newwarp.size(), CV_8UC3, Scalar(0,0,0));
-	if (abs(lane_find_image.__k_pitch) > 2e-5 && (!lane_find_image.__split))
+	int total_num = plot_pts.size();
+
+	// warp the bird-eye view to original view
+	vector<Point2f> plot_pts_ori_view; 
+	if (abs(lane_find_image.__k_pitch) > 2e-5 && (!lane_find_image.__split)) // pitch angle compensation
 	{
-		warpPerspective(warp_zero, warp_zero, lane_find_image.__inv_per_mtx_comp, warp_size );
+		perspectiveTransform(plot_pts, plot_pts, lane_find_image.__inv_per_mtx_comp);
 	}
-	warpPerspective(warp_zero, newwarp_lanemark, van_pt.inv_per_mtx, img_size );
+	perspectiveTransform(plot_pts, plot_pts_ori_view, van_pt.inv_per_mtx);
+
+	// cast to Point2i for drawing, and split left and right point for evaluation (outside of the c++ program)
+	vector<Point> plot_pts_ori_view_int(plot_pts_ori_view.begin(), plot_pts_ori_view.end()); //plot_pts_ori_view.size()
+	vector<Point2f> plot_pts_l(plot_pts_ori_view.begin(), plot_pts_ori_view.begin() + left_num);
+	vector<Point2f> plot_pts_r(plot_pts_ori_view.begin() + left_num, plot_pts_ori_view.end());
+
+	// draw on original view
+	Mat newwarp_lanemark(newwarp.size(), CV_8UC3, Scalar(0,0,0));
+	if (left_fit_w * right_fit_w == 0 ) // || left_fit == Vec3f(0, 0, 0) || right_fit == Vec3f(0, 0, 0)
+		fillConvexPoly(newwarp_lanemark, plot_pts_ori_view_int, Scalar(255, 0, 0));
+	else if ( left_fit_w < 0.1 || right_fit_w < 0.1 )
+		fillConvexPoly(newwarp_lanemark, plot_pts_ori_view_int, Scalar(150, 150, 0));
+	else
+		fillConvexPoly(newwarp_lanemark, plot_pts_ori_view_int, Scalar(0, 255, 0) );
 	newwarp = newwarp + newwarp_lanemark;
+	
+	// vector<vector<Point> > plot_pts_vec;
+	// plot_pts_vec.push_back(plot_pts_ori_view_int);
+	// if (left_fit_w * right_fit_w == 0 ) // || left_fit == Vec3f(0, 0, 0) || right_fit == Vec3f(0, 0, 0)
+	// 	fillPoly(newwarp_lanemark, plot_pts_vec, Scalar(255, 0, 0) );
+	// else if ( left_fit_w < 0.1 || right_fit_w < 0.1 )
+	// 	fillPoly(newwarp_lanemark, plot_pts_vec, Scalar(150, 150, 0) );
+	// else
+	// 	fillPoly(newwarp_lanemark, plot_pts_vec, Scalar(0, 255, 0) );
+	// newwarp = newwarp + newwarp_lanemark;
+
+	// write the points to txt file
+	pointfile << left_num << " " << total_num << " " << endl;
+	for (int i =0; i < total_num; i++)
+	{
+		pointfile << plot_pts_ori_view_int[i].y << " ";
+	}
+	pointfile <<endl;
+	for (int i =0; i < total_num; i++)
+	{
+		pointfile << plot_pts_ori_view_int[i].x << " ";
+	}
+	pointfile <<endl;
 }

@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/minghan/lane-detection/5
+CMAKE_SOURCE_DIR = /home/minghanz/lane-detection/5
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/minghan/lane-detection/5
+CMAKE_BINARY_DIR = /home/minghanz/lane-detection/5
 
 # Include any dependencies generated for this target.
 include CMakeFiles/lane-detection.dir/depend.make
@@ -59,16 +59,16 @@ include CMakeFiles/lane-detection.dir/flags.make
 
 CMakeFiles/lane-detection.dir/main.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/main.cpp.o: main.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/lane-detection.dir/main.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/main.cpp.o -c /home/minghan/lane-detection/5/main.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object CMakeFiles/lane-detection.dir/main.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/main.cpp.o -c /home/minghanz/lane-detection/5/main.cpp
 
 CMakeFiles/lane-detection.dir/main.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/main.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/main.cpp > CMakeFiles/lane-detection.dir/main.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/main.cpp > CMakeFiles/lane-detection.dir/main.cpp.i
 
 CMakeFiles/lane-detection.dir/main.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/main.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/main.cpp -o CMakeFiles/lane-detection.dir/main.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/main.cpp -o CMakeFiles/lane-detection.dir/main.cpp.s
 
 CMakeFiles/lane-detection.dir/main.cpp.o.requires:
 
@@ -83,16 +83,16 @@ CMakeFiles/lane-detection.dir/main.cpp.o.provides.build: CMakeFiles/lane-detecti
 
 CMakeFiles/lane-detection.dir/LaneImage.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/LaneImage.cpp.o: LaneImage.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage.cpp.o -c /home/minghan/lane-detection/5/LaneImage.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage.cpp.o -c /home/minghanz/lane-detection/5/LaneImage.cpp
 
 CMakeFiles/lane-detection.dir/LaneImage.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/LaneImage.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/LaneImage.cpp > CMakeFiles/lane-detection.dir/LaneImage.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/LaneImage.cpp > CMakeFiles/lane-detection.dir/LaneImage.cpp.i
 
 CMakeFiles/lane-detection.dir/LaneImage.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/LaneImage.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/LaneImage.cpp -o CMakeFiles/lane-detection.dir/LaneImage.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/LaneImage.cpp -o CMakeFiles/lane-detection.dir/LaneImage.cpp.s
 
 CMakeFiles/lane-detection.dir/LaneImage.cpp.o.requires:
 
@@ -107,16 +107,16 @@ CMakeFiles/lane-detection.dir/LaneImage.cpp.o.provides.build: CMakeFiles/lane-de
 
 CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o: LaneImage_fit.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o -c /home/minghan/lane-detection/5/LaneImage_fit.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o -c /home/minghanz/lane-detection/5/LaneImage_fit.cpp
 
 CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/LaneImage_fit.cpp > CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/LaneImage_fit.cpp > CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.i
 
 CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/LaneImage_fit.cpp -o CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/LaneImage_fit.cpp -o CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.s
 
 CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o.requires:
 
@@ -131,16 +131,16 @@ CMakeFiles/lane-detection.dir/LaneImage_fit.cpp.o.provides.build: CMakeFiles/lan
 
 CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o: LaneImage_p0.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o -c /home/minghan/lane-detection/5/LaneImage_p0.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o -c /home/minghanz/lane-detection/5/LaneImage_p0.cpp
 
 CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/LaneImage_p0.cpp > CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/LaneImage_p0.cpp > CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.i
 
 CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/LaneImage_p0.cpp -o CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/LaneImage_p0.cpp -o CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.s
 
 CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o.requires:
 
@@ -155,16 +155,16 @@ CMakeFiles/lane-detection.dir/LaneImage_p0.cpp.o.provides.build: CMakeFiles/lane
 
 CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o: LaneImage_pp.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o -c /home/minghan/lane-detection/5/LaneImage_pp.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o -c /home/minghanz/lane-detection/5/LaneImage_pp.cpp
 
 CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/LaneImage_pp.cpp > CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/LaneImage_pp.cpp > CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.i
 
 CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/LaneImage_pp.cpp -o CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/LaneImage_pp.cpp -o CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.s
 
 CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o.requires:
 
@@ -179,16 +179,16 @@ CMakeFiles/lane-detection.dir/LaneImage_pp.cpp.o.provides.build: CMakeFiles/lane
 
 CMakeFiles/lane-detection.dir/Line.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/Line.cpp.o: Line.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/lane-detection.dir/Line.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/Line.cpp.o -c /home/minghan/lane-detection/5/Line.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/lane-detection.dir/Line.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/Line.cpp.o -c /home/minghanz/lane-detection/5/Line.cpp
 
 CMakeFiles/lane-detection.dir/Line.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/Line.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/Line.cpp > CMakeFiles/lane-detection.dir/Line.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/Line.cpp > CMakeFiles/lane-detection.dir/Line.cpp.i
 
 CMakeFiles/lane-detection.dir/Line.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/Line.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/Line.cpp -o CMakeFiles/lane-detection.dir/Line.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/Line.cpp -o CMakeFiles/lane-detection.dir/Line.cpp.s
 
 CMakeFiles/lane-detection.dir/Line.cpp.o.requires:
 
@@ -203,16 +203,16 @@ CMakeFiles/lane-detection.dir/Line.cpp.o.provides.build: CMakeFiles/lane-detecti
 
 CMakeFiles/lane-detection.dir/VanPt.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/VanPt.cpp.o: VanPt.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/lane-detection.dir/VanPt.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/VanPt.cpp.o -c /home/minghan/lane-detection/5/VanPt.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/lane-detection.dir/VanPt.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/VanPt.cpp.o -c /home/minghanz/lane-detection/5/VanPt.cpp
 
 CMakeFiles/lane-detection.dir/VanPt.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/VanPt.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/VanPt.cpp > CMakeFiles/lane-detection.dir/VanPt.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/VanPt.cpp > CMakeFiles/lane-detection.dir/VanPt.cpp.i
 
 CMakeFiles/lane-detection.dir/VanPt.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/VanPt.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/VanPt.cpp -o CMakeFiles/lane-detection.dir/VanPt.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/VanPt.cpp -o CMakeFiles/lane-detection.dir/VanPt.cpp.s
 
 CMakeFiles/lane-detection.dir/VanPt.cpp.o.requires:
 
@@ -227,16 +227,16 @@ CMakeFiles/lane-detection.dir/VanPt.cpp.o.provides.build: CMakeFiles/lane-detect
 
 CMakeFiles/lane-detection.dir/LearnModel.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/LearnModel.cpp.o: LearnModel.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/lane-detection.dir/LearnModel.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LearnModel.cpp.o -c /home/minghan/lane-detection/5/LearnModel.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/lane-detection.dir/LearnModel.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LearnModel.cpp.o -c /home/minghanz/lane-detection/5/LearnModel.cpp
 
 CMakeFiles/lane-detection.dir/LearnModel.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/LearnModel.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/LearnModel.cpp > CMakeFiles/lane-detection.dir/LearnModel.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/LearnModel.cpp > CMakeFiles/lane-detection.dir/LearnModel.cpp.i
 
 CMakeFiles/lane-detection.dir/LearnModel.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/LearnModel.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/LearnModel.cpp -o CMakeFiles/lane-detection.dir/LearnModel.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/LearnModel.cpp -o CMakeFiles/lane-detection.dir/LearnModel.cpp.s
 
 CMakeFiles/lane-detection.dir/LearnModel.cpp.o.requires:
 
@@ -251,16 +251,16 @@ CMakeFiles/lane-detection.dir/LearnModel.cpp.o.provides.build: CMakeFiles/lane-d
 
 CMakeFiles/lane-detection.dir/LaneMark.cpp.o: CMakeFiles/lane-detection.dir/flags.make
 CMakeFiles/lane-detection.dir/LaneMark.cpp.o: LaneMark.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/lane-detection.dir/LaneMark.cpp.o"
-	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneMark.cpp.o -c /home/minghan/lane-detection/5/LaneMark.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Building CXX object CMakeFiles/lane-detection.dir/LaneMark.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/LaneMark.cpp.o -c /home/minghanz/lane-detection/5/LaneMark.cpp
 
 CMakeFiles/lane-detection.dir/LaneMark.cpp.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/LaneMark.cpp.i"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghan/lane-detection/5/LaneMark.cpp > CMakeFiles/lane-detection.dir/LaneMark.cpp.i
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/LaneMark.cpp > CMakeFiles/lane-detection.dir/LaneMark.cpp.i
 
 CMakeFiles/lane-detection.dir/LaneMark.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/LaneMark.cpp.s"
-	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghan/lane-detection/5/LaneMark.cpp -o CMakeFiles/lane-detection.dir/LaneMark.cpp.s
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/LaneMark.cpp -o CMakeFiles/lane-detection.dir/LaneMark.cpp.s
 
 CMakeFiles/lane-detection.dir/LaneMark.cpp.o.requires:
 
@@ -273,6 +273,54 @@ CMakeFiles/lane-detection.dir/LaneMark.cpp.o.provides: CMakeFiles/lane-detection
 CMakeFiles/lane-detection.dir/LaneMark.cpp.o.provides.build: CMakeFiles/lane-detection.dir/LaneMark.cpp.o
 
 
+CMakeFiles/lane-detection.dir/VehMask.cpp.o: CMakeFiles/lane-detection.dir/flags.make
+CMakeFiles/lane-detection.dir/VehMask.cpp.o: VehMask.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Building CXX object CMakeFiles/lane-detection.dir/VehMask.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/VehMask.cpp.o -c /home/minghanz/lane-detection/5/VehMask.cpp
+
+CMakeFiles/lane-detection.dir/VehMask.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/VehMask.cpp.i"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/VehMask.cpp > CMakeFiles/lane-detection.dir/VehMask.cpp.i
+
+CMakeFiles/lane-detection.dir/VehMask.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/VehMask.cpp.s"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/VehMask.cpp -o CMakeFiles/lane-detection.dir/VehMask.cpp.s
+
+CMakeFiles/lane-detection.dir/VehMask.cpp.o.requires:
+
+.PHONY : CMakeFiles/lane-detection.dir/VehMask.cpp.o.requires
+
+CMakeFiles/lane-detection.dir/VehMask.cpp.o.provides: CMakeFiles/lane-detection.dir/VehMask.cpp.o.requires
+	$(MAKE) -f CMakeFiles/lane-detection.dir/build.make CMakeFiles/lane-detection.dir/VehMask.cpp.o.provides.build
+.PHONY : CMakeFiles/lane-detection.dir/VehMask.cpp.o.provides
+
+CMakeFiles/lane-detection.dir/VehMask.cpp.o.provides.build: CMakeFiles/lane-detection.dir/VehMask.cpp.o
+
+
+CMakeFiles/lane-detection.dir/KeyPts.cpp.o: CMakeFiles/lane-detection.dir/flags.make
+CMakeFiles/lane-detection.dir/KeyPts.cpp.o: KeyPts.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_11) "Building CXX object CMakeFiles/lane-detection.dir/KeyPts.cpp.o"
+	/usr/bin/c++   $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/lane-detection.dir/KeyPts.cpp.o -c /home/minghanz/lane-detection/5/KeyPts.cpp
+
+CMakeFiles/lane-detection.dir/KeyPts.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/lane-detection.dir/KeyPts.cpp.i"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/minghanz/lane-detection/5/KeyPts.cpp > CMakeFiles/lane-detection.dir/KeyPts.cpp.i
+
+CMakeFiles/lane-detection.dir/KeyPts.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/lane-detection.dir/KeyPts.cpp.s"
+	/usr/bin/c++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/minghanz/lane-detection/5/KeyPts.cpp -o CMakeFiles/lane-detection.dir/KeyPts.cpp.s
+
+CMakeFiles/lane-detection.dir/KeyPts.cpp.o.requires:
+
+.PHONY : CMakeFiles/lane-detection.dir/KeyPts.cpp.o.requires
+
+CMakeFiles/lane-detection.dir/KeyPts.cpp.o.provides: CMakeFiles/lane-detection.dir/KeyPts.cpp.o.requires
+	$(MAKE) -f CMakeFiles/lane-detection.dir/build.make CMakeFiles/lane-detection.dir/KeyPts.cpp.o.provides.build
+.PHONY : CMakeFiles/lane-detection.dir/KeyPts.cpp.o.provides
+
+CMakeFiles/lane-detection.dir/KeyPts.cpp.o.provides.build: CMakeFiles/lane-detection.dir/KeyPts.cpp.o
+
+
 # Object files for target lane-detection
 lane__detection_OBJECTS = \
 "CMakeFiles/lane-detection.dir/main.cpp.o" \
@@ -283,7 +331,9 @@ lane__detection_OBJECTS = \
 "CMakeFiles/lane-detection.dir/Line.cpp.o" \
 "CMakeFiles/lane-detection.dir/VanPt.cpp.o" \
 "CMakeFiles/lane-detection.dir/LearnModel.cpp.o" \
-"CMakeFiles/lane-detection.dir/LaneMark.cpp.o"
+"CMakeFiles/lane-detection.dir/LaneMark.cpp.o" \
+"CMakeFiles/lane-detection.dir/VehMask.cpp.o" \
+"CMakeFiles/lane-detection.dir/KeyPts.cpp.o"
 
 # External object files for target lane-detection
 lane__detection_EXTERNAL_OBJECTS =
@@ -297,53 +347,57 @@ lane-detection: CMakeFiles/lane-detection.dir/Line.cpp.o
 lane-detection: CMakeFiles/lane-detection.dir/VanPt.cpp.o
 lane-detection: CMakeFiles/lane-detection.dir/LearnModel.cpp.o
 lane-detection: CMakeFiles/lane-detection.dir/LaneMark.cpp.o
+lane-detection: CMakeFiles/lane-detection.dir/VehMask.cpp.o
+lane-detection: CMakeFiles/lane-detection.dir/KeyPts.cpp.o
 lane-detection: CMakeFiles/lane-detection.dir/build.make
-lane-detection: /opt/ros/kinetic/lib/libopencv_stitching3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_superres3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_videostab3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_aruco3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_bgsegm3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_bioinspired3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_ccalib3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_cvv3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_datasets3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_dpm3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_face3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_fuzzy3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_hdf3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_line_descriptor3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_optflow3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_plot3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_reg3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_saliency3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_stereo3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_structured_light3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_surface_matching3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_text3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_xfeatures2d3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_ximgproc3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_xobjdetect3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_xphoto3.so.3.2.0
-lane-detection: /usr/lib/x86_64-linux-gnu/libarmadillo.so
-lane-detection: alglib/libalglib.a
-lane-detection: /opt/ros/kinetic/lib/libopencv_shape3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_video3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_viz3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_phase_unwrapping3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_rgbd3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_calib3d3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_features2d3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_flann3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_objdetect3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_ml3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_highgui3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_photo3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_videoio3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_imgcodecs3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_imgproc3.so.3.2.0
-lane-detection: /opt/ros/kinetic/lib/libopencv_core3.so.3.2.0
+lane-detection: /usr/local/lib/libopencv_stitching.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_superres.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_videostab.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_aruco.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_bgsegm.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_bioinspired.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_ccalib.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_dnn_modern.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_dpm.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_face.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_freetype.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_fuzzy.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_hdf.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_img_hash.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_line_descriptor.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_optflow.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_reg.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_rgbd.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_saliency.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_sfm.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_stereo.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_structured_light.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_surface_matching.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_tracking.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_xfeatures2d.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_ximgproc.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_xobjdetect.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_xphoto.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_photo.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_shape.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_calib3d.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_phase_unwrapping.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_dnn.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_video.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_datasets.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_plot.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_text.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_features2d.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_flann.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_highgui.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_ml.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_videoio.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_imgcodecs.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_objdetect.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_imgproc.so.3.3.0
+lane-detection: /usr/local/lib/libopencv_core.so.3.3.0
 lane-detection: CMakeFiles/lane-detection.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_10) "Linking CXX executable lane-detection"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=$(CMAKE_PROGRESS_12) "Linking CXX executable lane-detection"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/lane-detection.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
@@ -360,6 +414,8 @@ CMakeFiles/lane-detection.dir/requires: CMakeFiles/lane-detection.dir/Line.cpp.o
 CMakeFiles/lane-detection.dir/requires: CMakeFiles/lane-detection.dir/VanPt.cpp.o.requires
 CMakeFiles/lane-detection.dir/requires: CMakeFiles/lane-detection.dir/LearnModel.cpp.o.requires
 CMakeFiles/lane-detection.dir/requires: CMakeFiles/lane-detection.dir/LaneMark.cpp.o.requires
+CMakeFiles/lane-detection.dir/requires: CMakeFiles/lane-detection.dir/VehMask.cpp.o.requires
+CMakeFiles/lane-detection.dir/requires: CMakeFiles/lane-detection.dir/KeyPts.cpp.o.requires
 
 .PHONY : CMakeFiles/lane-detection.dir/requires
 
@@ -368,6 +424,6 @@ CMakeFiles/lane-detection.dir/clean:
 .PHONY : CMakeFiles/lane-detection.dir/clean
 
 CMakeFiles/lane-detection.dir/depend:
-	cd /home/minghan/lane-detection/5 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/minghan/lane-detection/5 /home/minghan/lane-detection/5 /home/minghan/lane-detection/5 /home/minghan/lane-detection/5 /home/minghan/lane-detection/5/CMakeFiles/lane-detection.dir/DependInfo.cmake --color=$(COLOR)
+	cd /home/minghanz/lane-detection/5 && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /home/minghanz/lane-detection/5 /home/minghanz/lane-detection/5 /home/minghanz/lane-detection/5 /home/minghanz/lane-detection/5 /home/minghanz/lane-detection/5/CMakeFiles/lane-detection.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : CMakeFiles/lane-detection.dir/depend
 

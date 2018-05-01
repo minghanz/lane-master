@@ -54,19 +54,19 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/minghan/lane-detection/5
+CMAKE_SOURCE_DIR = /home/minghanz/lane-detection/5
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/minghan/lane-detection/5
+CMAKE_BINARY_DIR = /home/minghanz/lane-detection/5
 
 #=============================================================================
 # Target rules for target CMakeFiles/lane-detection.dir
 
 # All Build rule for target.
-CMakeFiles/lane-detection.dir/all: alglib/CMakeFiles/alglib.dir/all
+CMakeFiles/lane-detection.dir/all:
 	$(MAKE) -f CMakeFiles/lane-detection.dir/build.make CMakeFiles/lane-detection.dir/depend
 	$(MAKE) -f CMakeFiles/lane-detection.dir/build.make CMakeFiles/lane-detection.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=11,12,13,14,15,16,17,18,19,20 "Built target lane-detection"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/minghanz/lane-detection/5/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10,11,12 "Built target lane-detection"
 .PHONY : CMakeFiles/lane-detection.dir/all
 
 # Include target in all.
@@ -76,9 +76,9 @@ all: CMakeFiles/lane-detection.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/lane-detection.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghan/lane-detection/5/CMakeFiles 20
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghanz/lane-detection/5/CMakeFiles 12
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/lane-detection.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghan/lane-detection/5/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghanz/lane-detection/5/CMakeFiles 0
 .PHONY : CMakeFiles/lane-detection.dir/rule
 
 # Convenience name for target.
@@ -93,61 +93,6 @@ CMakeFiles/lane-detection.dir/clean:
 
 # clean rule for target.
 clean: CMakeFiles/lane-detection.dir/clean
-
-.PHONY : clean
-
-#=============================================================================
-# Directory level rules for directory alglib
-
-# Convenience name for "all" pass in the directory.
-alglib/all: alglib/CMakeFiles/alglib.dir/all
-
-.PHONY : alglib/all
-
-# Convenience name for "clean" pass in the directory.
-alglib/clean: alglib/CMakeFiles/alglib.dir/clean
-
-.PHONY : alglib/clean
-
-# Convenience name for "preinstall" pass in the directory.
-alglib/preinstall:
-
-.PHONY : alglib/preinstall
-
-#=============================================================================
-# Target rules for target alglib/CMakeFiles/alglib.dir
-
-# All Build rule for target.
-alglib/CMakeFiles/alglib.dir/all:
-	$(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/depend
-	$(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/minghan/lane-detection/5/CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9,10 "Built target alglib"
-.PHONY : alglib/CMakeFiles/alglib.dir/all
-
-# Include target in all.
-all: alglib/CMakeFiles/alglib.dir/all
-
-.PHONY : all
-
-# Build rule for subdir invocation for target.
-alglib/CMakeFiles/alglib.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghan/lane-detection/5/CMakeFiles 10
-	$(MAKE) -f CMakeFiles/Makefile2 alglib/CMakeFiles/alglib.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/minghan/lane-detection/5/CMakeFiles 0
-.PHONY : alglib/CMakeFiles/alglib.dir/rule
-
-# Convenience name for target.
-alglib: alglib/CMakeFiles/alglib.dir/rule
-
-.PHONY : alglib
-
-# clean rule for target.
-alglib/CMakeFiles/alglib.dir/clean:
-	$(MAKE) -f alglib/CMakeFiles/alglib.dir/build.make alglib/CMakeFiles/alglib.dir/clean
-.PHONY : alglib/CMakeFiles/alglib.dir/clean
-
-# clean rule for target.
-clean: alglib/CMakeFiles/alglib.dir/clean
 
 .PHONY : clean
 
