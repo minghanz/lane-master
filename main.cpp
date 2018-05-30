@@ -17,7 +17,8 @@ Size img_size;
 
 int main(int argc, char** argv)
 {
-	bool cali = true;
+	////////////////////////// Calibration
+	bool cali = true; // calibrate using txt file (true) or using default value (false)
 	if (argc >= 3)
 	{
 		string flag_cali = argv[2];
@@ -25,10 +26,13 @@ int main(int argc, char** argv)
 			cali = false;
 	}
 	
-	Mat cam_mtx(3, 3, CV_64FC1, Scalar(0)); // camera matrix(inner parameters) and distortion coefficient
+	/// Camera intrinsic matrix and distortion coefficient
+	Mat cam_mtx(3, 3, CV_64FC1, Scalar(0)); 
 	Mat dist_coeff;
-	float alpha_w, alpha_h; // horizontal and vertical angle of view
+	/// Horizontal and vertical angle of view
+	float alpha_w, alpha_h; 
 
+	/// Read calibration information from txt file
 	char cam_mtx_param[200], dist_coeff_param[200], van_param_s[200];
 	// ifstream cali_file("../prj_cali/calib_red_mkz_webcam.txt");
 	// ifstream cali_file("../prj_cali/calib_red_mkz_webcam_mcity.txt");
@@ -37,6 +41,8 @@ int main(int argc, char** argv)
 	cali_file.getline(dist_coeff_param, 200);
 	cali_file.getline(van_param_s, 200);
 
+	/// Parse the information for vanishing point 
+	/// (outside of cali because vanishing point info may be provided without camera intrinsic parameters)
 	vector<float> van_param(3, 0);
 	sscanf(van_param_s, "%f %f %f", &(van_param[0]), &(van_param[1]), &(van_param[2]));
 	cout << "van_param: " << van_param[0] << " " << van_param[1] << " " << van_param[2] << endl;
@@ -56,9 +62,11 @@ int main(int argc, char** argv)
 		// vector<Mat> rvecs, tvecs;
 		// calibrateCamera(obj_pts, img_pts, image_size, cam_mtx, dist_coeff, rvecs, tvecs);
 
+		/// Parse the information for camera intrinsic matrix
 		sscanf(cam_mtx_param, "%lf %lf %lf %lf", &cam_mtx.at<double>(0, 0), &cam_mtx.at<double>(1, 1), &cam_mtx.at<double>(0, 2), &cam_mtx.at<double>(1, 2));
 		cam_mtx.at<double>(2, 2) = 1;
 		
+		/// Parse the information for camera distortion coefficients
 		vector<double> dist_coeff_vec;
 		for (int i = 0, j = 0; i < strlen(dist_coeff_param); i++)
 		{
@@ -82,12 +90,6 @@ int main(int argc, char** argv)
 		cout << "cameraMatrix: " << cam_mtx << endl;
 		cout << "dist_coeff: " << dist_coeff << endl;
 
-		// cout << "dist_coeff: [";
-		// for (int i = 0; i < dist_coeff.size(); i++)
-		// {
-		// 	cout << dist_coeff[i] << ", ";
-		// }
-		// cout << "]" << endl;
 
 		cout << "size of cam_mtx: " << cam_mtx.size() << endl;
 		cout << "depth of cam_mtx: " << cam_mtx.depth() << endl;
@@ -97,8 +99,9 @@ int main(int argc, char** argv)
 		cout << cam_mtx.at<double>(0,2) << " " << cam_mtx.at<double>(0,0) << endl;
 		cout << cam_mtx.at<double>(1,2) << " " << cam_mtx.at<double>(1,1) << endl;
 		
-		alpha_w = atan2(cam_mtx.at<double>(0,2), cam_mtx.at<double>(0,0)); // angle of view horizontal
-		alpha_h = atan2(cam_mtx.at<double>(1,2), cam_mtx.at<double>(1,1)); // angle of view vertical
+		/// Angle of view (one side)
+		alpha_w = atan2(cam_mtx.at<double>(0,2), cam_mtx.at<double>(0,0)); // horizontal
+		alpha_h = atan2(cam_mtx.at<double>(1,2), cam_mtx.at<double>(1,1)); // vertical
 	}
 	else
 	{

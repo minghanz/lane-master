@@ -118,6 +118,16 @@ VehMask::VehMask() // : tracker(TrackerMIL::create())
 
 }
 
+#ifndef VEH_DETC
+void VehMask::detectHOG(Mat& img, Mat& per_mtx, Mat& inv_per_mtx)
+{
+    ori_veh_mask = Mat(img_size, CV_8UC1, Scalar(0));
+    warp_veh_mask = Mat(Size(warp_col, warp_row), CV_8UC1, Scalar(0));
+    valid_detc.clear();
+    track_detc.clear();
+    trackers.clear();
+}
+#else
 void VehMask::detectHOG(Mat& img, Mat& per_mtx, Mat& inv_per_mtx)
 {
     Mat subimg;
@@ -331,6 +341,8 @@ void VehMask::detectHOG(Mat& img, Mat& per_mtx, Mat& inv_per_mtx)
 
     warpPerspective(ori_veh_mask, warp_veh_mask, per_mtx, Size(warp_col, warp_row));
 }
+#endif
+
 
 void VehMask::drawOn(Mat& newwarp)
 {
@@ -343,6 +355,12 @@ void VehMask::drawOn(Mat& newwarp)
     }
 }
 
+#ifndef VEH_DETC
+void VehMask::indicateOnWarp(Mat& warped_raw_img)
+{
+
+}
+#else
 void VehMask::indicateOnWarp(Mat& warped_raw_img)
 {
     Mat warp_raw_copy;
@@ -356,3 +374,4 @@ void VehMask::indicateOnWarp(Mat& warped_raw_img)
     }
     imshow("warp_raw_copy", warp_raw_copy);
 }
+#endif

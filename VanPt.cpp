@@ -34,17 +34,18 @@ VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alp
 
 		van_pt_cali = Point2f(van_pt_cali_x, van_pt_cali_y);
 		van_pt_ini = van_pt_cali;
-		theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle 
-		theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle
+		theta_w = atan(tan(ALPHA_W)*((van_pt_ini.x - img_size.width/2)/(img_size.width/2))); 	// yaw angle (positive if the camera is facing left)
+		theta_h = atan(tan(ALPHA_H)*((van_pt_ini.y - img_size.height/2)/(img_size.height/2)));	// pitch angle (positive if the camera is facing up, van near bottom)
 
-		float theta_h_cali = atan(tan(alpha_h)*(1- 2*van_pt_cali_y/img_size.height));
+		// float theta_h_cali = atan(tan(alpha_h)*(1- 2*van_pt_cali_y/img_size.height));		// pitch angle (negative of theta_h)
 
-		float real_width_center = 1 / (coef_pix_per_cm*(img_size.height/2 - van_pt_cali_y)) * 60;
-		float beta_w = atan(tan(alpha_w)*(2*60/img_size.width)); // 60 is half_width when calibrating van_pt
-		float axis_dist = real_width_center / tan(beta_w) ;
-		float cam_height = axis_dist * sin(theta_h_cali);
+		float real_width_center = 1 / (coef_pix_per_cm*(img_size.height/2 - van_pt_cali_y));	// width in the real world corresponding to one pixel on the center row
+		float tan_beta_w = tan(alpha_w)*(2.0/img_size.width); 	// tan of the viewing angle corresponding to one pixel on the center row
+		float axis_dist = real_width_center / tan_beta_w ;		// distance on the optical axis to the line in the real world corresponding to the center row in the image
+		float cam_height = abs(axis_dist * sin(theta_h));		// height of the camera
 
-		float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
+		float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;	// width in the real world corresponding to the bottom row of the original image
+
 		//// old method before 01/21/2018
 		// float warp_pix_per_cm = warp_col / real_width_bottom;
 		// min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
@@ -58,15 +59,16 @@ VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alp
 		// min_width_pixel_warp = warp_col/6;
 
 		// new method to fix the width correspondence in warp img
-		float warp_real_width = 2.5*370.0;   // let the warp_img contain 2.5 standard lane width (3.7m/lane)
-		float warp_pix_per_cm = warp_col/warp_real_width;	
-		min_width_pixel_warp = warp_pix_per_cm*200; // set min_lane_width as 2m
-		int corr_width = warp_col * real_width_bottom/warp_real_width;
-		margin_side = (warp_col - corr_width)/2;
+		float warp_real_width = 2.5*370.0;   				// desired real world width (cm) that we want to contain in the bird eye view image
+		float warp_pix_per_cm = warp_col/warp_real_width;	// ratio pix/cm of the bird eye view image
+		min_width_pixel_warp = warp_pix_per_cm*200; 		// minimal width of pixels in the bird-eye-view that is valid for a lane 
 
-		float warp_dist = real_width_bottom/2 / (tan(alpha_w)/6.0);
-		float warp_pix_per_m_long = warp_row/warp_dist*100;
-		min_length_pixel_warp = warp_pix_per_m_long*2.5; // set min lane marking length as 2.5m (3m standard)
+		int corr_width = warp_col * real_width_bottom/warp_real_width;	// number of columns in the bird-eye-view corresponding to the bottom row of original image
+		margin_side = (warp_col - corr_width)/2;			// width of margin on the two sides of bord-eye-view for warping the original image
+
+		float warp_dist = real_width_bottom * 6.0 / 2.0 /tan(alpha_w); // real world distance from camera to the top of bird-eye-view image (6.0 is from the ratio of distance from bottom to van and from top of bev to van)
+		float warp_pix_per_m_long = warp_row/warp_dist*100;	// ratio pix/m in bird eye view image (vertically)
+		min_length_pixel_warp = warp_pix_per_m_long*2.5; 	// minimal lane marking length in bird-eye-view (set to 2.5m in real world) (3m standard)
 
 		cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
 		cout << "real_width_bottom: " << real_width_bottom << endl;

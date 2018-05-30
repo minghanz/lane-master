@@ -52,3 +52,5 @@ extern Size img_size; // defined in main.cpp
 
 // #define CLUSTER_FOR_VOTE //  NMS+Hough  or  cluster+fit  in GaborVote
 #define CANNY_VOTE
+
+// #define VEH_DETC
