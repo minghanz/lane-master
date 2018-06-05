@@ -52,7 +52,7 @@ void LaneMark::recordImgFit(LaneImage& lane_find_image)
 	b_pitch = lane_find_image.__b_pitch;
 }
 
-void LaneMark::recordBestFit(Line& left_lane, Line& right_lane)
+void LaneMark::recordBestFit(Line& left_lane, Line& right_lane, VanPt& van_pt)
 {
 	if ( left_lane.detected && right_lane.detected )
 	{
@@ -64,6 +64,9 @@ void LaneMark::recordBestFit(Line& left_lane, Line& right_lane)
 		float mean_dist = getLaneWidthWarp(left_fit_best, right_fit_best);
 		window_half_width = max(5, (int)(mean_dist/6.0)); // 6 / 0.125
 		cout << "window_half_width: " << window_half_width << endl;
+
+		float lane_width_real_world = mean_dist / van_pt.warp_pix_per_cm;
+		cout << "lane width: " << lane_width_real_world << endl;
 	}
 	else
 	{

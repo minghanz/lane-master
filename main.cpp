@@ -250,7 +250,7 @@ int main(int argc, char** argv)
 
 				learn_model.pushNewRecord(lane_find_image);
 
-				lane_mark.recordBestFit(left_lane, right_lane);
+				lane_mark.recordBestFit(left_lane, right_lane, van_pt);
 				lane_mark.recordHistFit();
 
 				// van_pt.recordBestVan(left_lane, right_lane);

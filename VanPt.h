@@ -58,10 +58,13 @@ public:
     bool cali_van;
     // #ifdef CALI_VAN
 
-    float coef_pix_per_cm;
-    float van_pt_cali_y;	
+    float coef_pix_per_cm;  // constant
+    float warp_pix_per_cm;  // constant
+    float warp_real_width;  // constant
+    int margin_side;
+    float van_pt_cali_y;    // constant
     float min_length_pixel_warp;
-    float min_width_pixel_warp;
+    float min_width_pixel_warp; // constant
     // #endif
     ///////////////////////////////
     vector<Vec4i> lines_vote;

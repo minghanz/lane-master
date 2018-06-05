@@ -62,7 +62,7 @@ public:
 public:
 	LaneMark();
 	void recordImgFit(LaneImage& lane_find_image);
-	void recordBestFit(Line& left_lane, Line& right_lane);
+	void recordBestFit(Line& left_lane, Line& right_lane, VanPt& van_pt);
 	void recordHistFit();
 	void drawOn(Mat& newwarp, VanPt& van_pt, LaneImage& lane_find_image, ofstream& pointfile);
 };

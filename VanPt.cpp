@@ -21,7 +21,7 @@ VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alp
 	{
 		cali_van = false;
 	}
-	int margin_side;
+
 	if (cali_van)
 	{
 		coef_pix_per_cm = params[0];
@@ -59,12 +59,12 @@ VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alp
 		// min_width_pixel_warp = warp_col/6;
 
 		// new method to fix the width correspondence in warp img
-		float warp_real_width = 2.5*370.0;   				// desired real world width (cm) that we want to contain in the bird eye view image
-		float warp_pix_per_cm = warp_col/warp_real_width;	// ratio pix/cm of the bird eye view image
-		min_width_pixel_warp = warp_pix_per_cm*200; 		// minimal width of pixels in the bird-eye-view that is valid for a lane 
+		warp_real_width = 2.5*370.0;   				// desired real world width (cm) that we want to contain in the bird eye view image
+		warp_pix_per_cm = warp_col/warp_real_width;	// ratio pix/cm of the bird eye view image
+		min_width_pixel_warp = warp_pix_per_cm*300; 		// minimal width of pixels in the bird-eye-view that is valid for a lane 
 
 		int corr_width = warp_col * real_width_bottom/warp_real_width;	// number of columns in the bird-eye-view corresponding to the bottom row of original image
-		margin_side = (warp_col - corr_width)/2;			// width of margin on the two sides of bord-eye-view for warping the original image
+		margin_side = (warp_col - corr_width)/2;			// width of margin on the two sides of bird-eye-view for warping the original image
 
 		float warp_dist = real_width_bottom * 6.0 / 2.0 /tan(alpha_w); // real world distance from camera to the top of bird-eye-view image (6.0 is from the ratio of distance from bottom to van and from top of bev to van)
 		float warp_pix_per_m_long = warp_row/warp_dist*100;	// ratio pix/m in bird eye view image (vertically)
@@ -92,7 +92,6 @@ VanPt::VanPt(float alpha_w, float alpha_h , vector<float>& params) : ALPHA_W(alp
 		min_length_pixel_warp = 30;
 	}
 	
-
 	// #else
 	// van_pt_ini = Point2f(img_size.width/2, 305); //img_size.height/2, 305 is estimated by eye for new data in Mcity
 	// van_pt_cali = van_pt_ini; 
@@ -268,6 +267,23 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 		warp_src.push_back(Point2f(warp_test_vec[0][2] ));
 		warp_src.push_back(Point2f(warp_test_vec[0][3] ));
 
+		if (cali_van)
+		{
+			float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
+			int corr_width = warp_col * real_width_bottom / warp_real_width; // number of columns in the bird-eye-view corresponding to the bottom row of original image
+			margin_side = (warp_col - corr_width) / 2;						 // width of margin on the two sides of bird-eye-view for warping the original image
+
+			float warp_dist = real_width_bottom * 6.0 / 2.0 / tan(ALPHA_W); // real world distance from camera to the top of bird-eye-view image (6.0 is from the ratio of distance from bottom to van and from top of bev to van)
+			float warp_pix_per_m_long = warp_row / warp_dist * 100;			// ratio pix/m in bird eye view image (vertically)
+			min_length_pixel_warp = warp_pix_per_m_long * 2.5;				// minimal lane marking length in bird-eye-view (set to 2.5m in real world) (3m standard)
+
+			warp_dst.clear();
+			warp_dst.push_back(Point2f(margin_side, 0)); // remind that calculation with int could result in weird values when division appears!
+			warp_dst.push_back(Point2f(margin_side, warp_row - 1));
+			warp_dst.push_back(Point2f(warp_col - margin_side, warp_row - 1));
+			warp_dst.push_back(Point2f(warp_col - margin_side, 0));
+		}
+
 		per_mtx = getPerspectiveTransform(warp_src, warp_dst);
 		inv_per_mtx = getPerspectiveTransform(warp_dst, warp_src);
 		
@@ -275,20 +291,6 @@ void VanPt::initialVan(Mat color_img, Mat image, Mat& warped_img, LaneMark& lane
 	}
 
 	#endif
-
-
-
-	// #ifdef CALI_VAN
-	if (cali_van)
-	{
-		float real_width_bottom = 1 / (coef_pix_per_cm*(y_bottom_warp - van_pt_cali_y)) * img_size.width;
-		float warp_pix_per_cm = warp_col / real_width_bottom;
-		min_width_pixel_warp = warp_pix_per_cm * 150; // assume lane width should be no less than 200cm
-		cout << "warp_pix_per_cm: " << warp_pix_per_cm << ", min_width_pixel_warp: " << min_width_pixel_warp << endl; 
-		min_width_pixel_warp = warp_col/6;
-	}
-	
-	// #endif
 
 }
 
